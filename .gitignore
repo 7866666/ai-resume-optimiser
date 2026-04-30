@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+resumes/
+resumes.db
+resumes.db-shm
+resumes.db-wal
+resumes.db-journal
+.env
+gemini_key.txt
+server-out.log
+server-err.log
