@@ -1456,7 +1456,7 @@ async def optimize_resume(
     if not api_key:
         return JSONResponse(
             status_code=500,
-            content={"error": "Paste your Gemini API key on the form, or set GEMINI_API_KEY in PowerShell/.env."},
+            content={"error": "GEMINI_API_KEY is not configured on the server. Add it in Render environment variables and redeploy."},
         )
 
     text = extract_text(resume_file)
