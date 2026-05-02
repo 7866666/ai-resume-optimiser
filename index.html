@@ -100,6 +100,16 @@ a {
   padding: 7px 10px;
 }
 
+.install-button {
+  background: #ffffff;
+  color: var(--navy);
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .workspace {
   max-width: 1260px;
   margin: 0 auto;
@@ -392,6 +402,45 @@ textarea {
   line-height: 1.55;
 }
 
+.install-panel {
+  margin-top: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: #fbfcfd;
+}
+
+.install-panel h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.install-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.install-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: white;
+}
+
+.install-card strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.install-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .mini-resume {
   display: grid;
   grid-template-columns: 32% 68%;
@@ -459,7 +508,8 @@ textarea {
 
   .score-strip,
   .result-body,
-  .steps {
+  .steps,
+  .install-grid {
     grid-template-columns: 1fr;
   }
 
@@ -473,6 +523,10 @@ textarea {
   }
 
   .top-status {
+    gap: 8px;
+  }
+
+  .top-status .pill {
     display: none;
   }
 }
@@ -492,6 +546,7 @@ textarea {
       <span class="pill">ATS scoring</span>
       <span class="pill">Word output</span>
       <span class="pill">Production app</span>
+      <button id="install-app" class="install-button" type="button">Install app</button>
     </div>
   </header>
 
@@ -525,6 +580,28 @@ textarea {
         </div>
       </form>
       <div id="status"></div>
+
+      <div class="install-panel">
+        <h3>Install on any device</h3>
+        <div class="install-grid">
+          <div class="install-card">
+            <strong>Android / Chrome</strong>
+            <p>Tap Install app or browser menu, then Add to Home screen.</p>
+          </div>
+          <div class="install-card">
+            <strong>iPhone / iPad</strong>
+            <p>Open in Safari, tap Share, then Add to Home Screen.</p>
+          </div>
+          <div class="install-card">
+            <strong>Windows / Mac</strong>
+            <p>Use Chrome or Edge and click the install icon in the address bar.</p>
+          </div>
+          <div class="install-card">
+            <strong>App Stores</strong>
+            <p>Use the same web app as a wrapper for Play Store, App Store, and desktop builds.</p>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="panel results">
@@ -614,10 +691,29 @@ const resultState = document.getElementById("result-state");
 const changesBox = document.getElementById("changes");
 const downloadsBox = document.getElementById("downloads");
 const resultSubtitle = document.getElementById("result-subtitle");
+const installButton = document.getElementById("install-app");
+let deferredInstallPrompt = null;
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/service-worker.js").catch(() => {});
 }
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  installButton.hidden = false;
+});
+
+installButton.addEventListener("click", async () => {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    return;
+  }
+
+  alert("Android/Chrome: use Add to Home screen. iPhone/iPad: open Safari, tap Share, then Add to Home Screen. Desktop: use Chrome/Edge install icon in the address bar.");
+});
 
 function escapeHtml(value) {
   return String(value)
