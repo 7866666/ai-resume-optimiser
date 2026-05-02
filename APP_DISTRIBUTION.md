@@ -28,11 +28,22 @@ https://resumefit-pro.onrender.com
 
 ## Play Store
 
-To publish on Google Play Store, wrap the PWA as an Android app using Trusted Web Activity.
+The Android app source is prepared in:
+
+```text
+mobile-app/
+```
+
+It uses Capacitor to wrap:
+
+```text
+https://resumefit-pro.onrender.com
+```
+
+To publish on Google Play Store, build a signed Android App Bundle from `mobile-app/android`.
 
 Recommended tools:
 
-- Bubblewrap
 - Android Studio
 - Google Play Console
 
@@ -41,6 +52,21 @@ Required:
 - Google Play Developer account
 - App name, icon, screenshots, privacy policy
 - Signed Android App Bundle `.aab`
+
+Build commands:
+
+```bash
+cd mobile-app
+npm install
+npx cap sync android
+npx cap open android
+```
+
+Then in Android Studio:
+
+```text
+Build > Generate Signed Bundle / APK > Android App Bundle
+```
 
 ## Apple App Store
 
@@ -53,6 +79,16 @@ Required:
 - App Store screenshots
 - Privacy policy
 - App review approval
+
+Build commands on macOS:
+
+```bash
+cd mobile-app
+npm install
+npx cap add ios
+npx cap sync ios
+npx cap open ios
+```
 
 ## Desktop Apps
 

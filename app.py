@@ -81,6 +81,84 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 def health():
     return {"status": "ok"}
 
+
+@app.get("/privacy", response_class=HTMLResponse)
+def privacy():
+    return HTMLResponse(
+        content="""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy | ResumeFit Pro</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 0; background: #f4f7fb; color: #122033; }
+main { max-width: 860px; margin: 0 auto; padding: 40px 20px; line-height: 1.6; }
+h1, h2 { color: #102a43; }
+a { color: #0c6576; }
+</style>
+</head>
+<body>
+<main>
+<h1>Privacy Policy</h1>
+<p>ResumeFit Pro helps users optimize resumes against job descriptions. Users may upload resume files and paste job descriptions for processing.</p>
+<h2>Data Processed</h2>
+<p>The application processes uploaded resume content, job descriptions, generated analysis, optimized resume text, and downloaded document output.</p>
+<h2>Purpose</h2>
+<p>Data is used only to provide ATS analysis, resume recommendations, preview, and Word document generation.</p>
+<h2>Third-Party AI Processing</h2>
+<p>Resume and job description content may be sent to the configured Gemini API provider to generate optimization results.</p>
+<h2>Storage</h2>
+<p>Generated resume HTML and analysis data may be stored temporarily in the application database to support preview and document download links.</p>
+<h2>User Responsibility</h2>
+<p>Users should avoid uploading unnecessary sensitive information and should review generated resume content before using it for job applications.</p>
+<h2>Contact</h2>
+<p>For support or privacy questions, contact: sumitmishra7886@gmail.com</p>
+<p><a href="/">Back to app</a></p>
+</main>
+</body>
+</html>
+"""
+    )
+
+
+@app.get("/terms", response_class=HTMLResponse)
+def terms():
+    return HTMLResponse(
+        content="""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terms | ResumeFit Pro</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 0; background: #f4f7fb; color: #122033; }
+main { max-width: 860px; margin: 0 auto; padding: 40px 20px; line-height: 1.6; }
+h1, h2 { color: #102a43; }
+a { color: #0c6576; }
+</style>
+</head>
+<body>
+<main>
+<h1>Terms of Use</h1>
+<p>ResumeFit Pro provides AI-assisted resume optimization and ATS scoring estimates. Results are suggestions and do not guarantee interviews, job offers, or hiring outcomes.</p>
+<h2>User Review</h2>
+<p>Users are responsible for reviewing, editing, and verifying all generated resume content before use.</p>
+<h2>No Employment Guarantee</h2>
+<p>ATS scores are estimates and may differ from employer systems.</p>
+<h2>Acceptable Use</h2>
+<p>Do not upload content that you do not have permission to process.</p>
+<h2>Contact</h2>
+<p>Support: sumitmishra7886@gmail.com</p>
+<p><a href="/">Back to app</a></p>
+</main>
+</body>
+</html>
+"""
+    )
+
 # ================= DATABASE =================
 
 def connect_db():

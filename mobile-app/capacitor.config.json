@@ -1,0 +1,20 @@
+{
+  "appId": "com.resumefitpro.app",
+  "appName": "ResumeFit Pro",
+  "webDir": "www",
+  "server": {
+    "url": "https://resumefit-pro.onrender.com",
+    "cleartext": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#102a43",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#102a43"
+    }
+  }
+}
