@@ -3,35 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0f2538">
-<meta name="description" content="AI resume optimizer with ATS scoring, job-description matching, resume preview, and Word document output.">
+<meta name="theme-color" content="#102a43">
+<meta name="description" content="AI resume optimizer with ATS scoring, job-description matching, recruiter-ready preview, and Word document output.">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/app-icon.svg" type="image/svg+xml">
 <title>ResumeFit Pro</title>
 <style>
 :root {
-  --ink: #172033;
-  --muted: #607083;
-  --page: #f3f6f9;
+  --ink: #122033;
+  --muted: #637083;
+  --page: #f4f7fb;
   --panel: #ffffff;
-  --line: #d8e1ea;
-  --navy: #0f2538;
-  --teal: #0e7490;
-  --teal-dark: #0b5f73;
-  --amber: #b7791f;
-  --green: #047857;
+  --line: #d9e2ec;
+  --navy: #102a43;
+  --navy-2: #183b56;
+  --teal: #0f7b8f;
+  --teal-2: #0c6576;
+  --cyan-soft: #e6f6f9;
+  --gold: #bd7b16;
+  --green: #087f5b;
   --red: #b42318;
+  --shadow: 0 18px 45px rgba(16, 42, 67, 0.12);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
   font-family: Arial, Helvetica, sans-serif;
-  background: var(--page);
+  background:
+    linear-gradient(135deg, rgba(15, 123, 143, 0.10), transparent 34%),
+    linear-gradient(315deg, rgba(189, 123, 22, 0.10), transparent 28%),
+    var(--page);
   color: var(--ink);
 }
 
@@ -42,7 +52,7 @@ textarea {
 }
 
 a {
-  color: var(--teal-dark);
+  color: var(--teal-2);
 }
 
 .app-shell {
@@ -50,14 +60,18 @@ a {
 }
 
 .topbar {
-  height: 66px;
-  background: var(--navy);
-  color: #ffffff;
-  border-bottom: 4px solid var(--teal);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 72px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 28px;
+  background: rgba(16, 42, 67, 0.96);
+  color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
 }
 
 .brand {
@@ -68,75 +82,264 @@ a {
 }
 
 .brand img {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   flex: 0 0 auto;
 }
 
 .brand-title {
   font-weight: 800;
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1.1;
 }
 
 .brand-subtitle {
-  font-size: 12px;
-  color: #bfd5df;
   margin-top: 3px;
+  color: #c6d8e6;
+  font-size: 12px;
 }
 
 .top-status {
   display: flex;
   align-items: center;
-  gap: 14px;
-  color: #cbd5e1;
+  gap: 10px;
+  color: #d9e8f5;
   font-size: 13px;
   white-space: nowrap;
 }
 
 .pill {
-  border: 1px solid rgba(255,255,255,0.25);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
-  padding: 7px 10px;
+  padding: 8px 11px;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .install-button {
-  background: #ffffff;
+  background: white;
   color: var(--navy);
   border: 0;
   border-radius: 999px;
-  padding: 8px 12px;
+  padding: 9px 13px;
   font-weight: 800;
   cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.install-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.hero {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 28px 24px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 22px;
+}
+
+.hero-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--navy);
+  color: white;
+  min-height: 260px;
+  padding: 30px;
+  box-shadow: var(--shadow);
+}
+
+.hero-card::before {
+  content: "";
+  position: absolute;
+  inset: auto -80px -120px auto;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: rgba(15, 123, 143, 0.38);
+  filter: blur(12px);
+}
+
+.hero-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 34px 34px;
+  opacity: 0.45;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.10);
+  color: #d9f7ff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1.02;
+  letter-spacing: 0;
+}
+
+.hero p {
+  max-width: 670px;
+  margin: 16px 0 0;
+  color: #d6e4ef;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.hero-stats {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hero-stat {
+  min-width: 140px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.hero-stat strong {
+  display: block;
+  font-size: 20px;
+  margin-bottom: 3px;
+}
+
+.hero-stat span {
+  color: #c6d8e6;
+  font-size: 12px;
+}
+
+.guide-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.guide-card h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+
+.guide-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.guide-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 48px;
+  bottom: -8px;
+  width: 2px;
+  background: var(--line);
+}
+
+.guide-num {
+  position: relative;
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--cyan-soft);
+  color: var(--teal-2);
+  font-weight: 800;
+}
+
+.guide-step strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.guide-step span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .workspace {
   max-width: 1260px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 22px 24px 34px;
   display: grid;
-  grid-template-columns: 420px minmax(0, 1fr);
+  grid-template-columns: 430px minmax(0, 1fr);
   gap: 22px;
+  align-items: start;
 }
 
 .panel {
-  background: var(--panel);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(16, 42, 67, 0.08);
 }
 
 .intake {
   padding: 20px;
 }
 
-.intake h1 {
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--teal-2);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.section-kicker::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--teal);
+}
+
+.intake h2,
+.results-head h2 {
   margin: 0 0 8px;
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1.2;
 }
 
-.intake-copy {
-  margin: 0 0 18px;
+.intake-copy,
+.results-head p {
+  margin: 0;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.5;
@@ -144,23 +347,43 @@ a {
 
 .steps {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin: 18px 0;
 }
 
 .step {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 10px;
-  min-height: 78px;
-  background: #fbfcfd;
+  padding: 12px;
+  background: #fbfdff;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.step:hover {
+  transform: translateY(-2px);
+  border-color: rgba(15, 123, 143, 0.34);
+  box-shadow: 0 10px 24px rgba(16, 42, 67, 0.08);
+}
+
+.step-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--cyan-soft);
+  color: var(--teal-2);
+  font-weight: 900;
 }
 
 .step strong {
   display: block;
+  margin-bottom: 4px;
   font-size: 13px;
-  margin-bottom: 5px;
 }
 
 .step span {
@@ -172,16 +395,16 @@ a {
 
 form {
   display: grid;
-  gap: 14px;
+  gap: 15px;
 }
 
 label {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 label span {
@@ -192,21 +415,27 @@ label span {
 input,
 textarea {
   width: 100%;
-  border: 1px solid #c2ccd8;
-  border-radius: 6px;
-  padding: 11px 12px;
+  border: 1px solid #c5d0dc;
+  border-radius: 8px;
+  padding: 12px 13px;
   color: var(--ink);
   background: white;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="file"] {
+  padding: 10px;
 }
 
 input:focus,
 textarea:focus {
-  outline: 3px solid rgba(14, 116, 144, 0.18);
+  outline: none;
   border-color: var(--teal);
+  box-shadow: 0 0 0 4px rgba(15, 123, 143, 0.15);
 }
 
 textarea {
-  min-height: 270px;
+  min-height: 260px;
   resize: vertical;
 }
 
@@ -219,20 +448,27 @@ textarea {
 
 .primary,
 .secondary {
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 12px 15px;
   font-weight: 800;
   cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .primary {
   background: var(--teal);
   color: white;
   border: 1px solid var(--teal);
+  box-shadow: 0 10px 22px rgba(15, 123, 143, 0.23);
+}
+
+.primary:hover,
+.secondary:hover {
+  transform: translateY(-1px);
 }
 
 .primary:hover {
-  background: var(--teal-dark);
+  background: var(--teal-2);
 }
 
 .secondary {
@@ -272,142 +508,12 @@ textarea {
   }
 }
 
-.results {
-  min-height: 740px;
-  overflow: hidden;
-}
-
-.results-head {
-  padding: 20px 22px;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-}
-
-.results-head h2 {
-  margin: 0 0 5px;
-  font-size: 20px;
-}
-
-.results-head p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.score-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  border-bottom: 1px solid var(--line);
-}
-
-.metric {
-  padding: 18px 20px;
-  border-right: 1px solid var(--line);
-}
-
-.metric:last-child {
-  border-right: 0;
-}
-
-.metric span {
-  display: block;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-}
-
-.metric strong {
-  display: block;
-  font-size: 30px;
-  line-height: 1;
-}
-
-.metric .ready {
-  color: var(--green);
-}
-
-.result-body {
-  padding: 20px 22px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 275px;
-  gap: 18px;
-}
-
-.change-list,
-.download-box,
-.preview-card {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #ffffff;
-}
-
-.change-list {
-  padding: 16px;
-  min-height: 320px;
-}
-
-.download-box {
-  padding: 16px;
-  align-self: start;
-}
-
-.preview-card {
-  margin-top: 18px;
-  padding: 16px;
-}
-
-.change-list h3,
-.download-box h3,
-.preview-card h3 {
-  margin: 0 0 12px;
-  font-size: 15px;
-}
-
-.change-list ul {
-  margin: 0;
-  padding-left: 18px;
-}
-
-.change-list li {
-  margin-bottom: 8px;
-  line-height: 1.45;
-  font-size: 13px;
-}
-
-.download-box a {
-  display: block;
-  text-decoration: none;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 11px 12px;
-  margin-bottom: 9px;
-  font-weight: 800;
-  color: var(--ink);
-}
-
-.download-box a.primary-link {
-  background: var(--navy);
-  border-color: var(--navy);
-  color: white;
-}
-
-.placeholder {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
 .install-panel {
   margin-top: 18px;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 16px;
-  background: #fbfcfd;
+  background: #fbfdff;
 }
 
 .install-panel h3 {
@@ -441,14 +547,202 @@ textarea {
   line-height: 1.45;
 }
 
+.results {
+  min-height: 760px;
+  overflow: hidden;
+}
+
+.results-head {
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.live-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #e8f7f1;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.45);
+    opacity: 0.35;
+  }
+}
+
+.score-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
+}
+
+.metric {
+  padding: 18px 20px;
+  border-right: 1px solid var(--line);
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+}
+
+.metric:last-child {
+  border-right: 0;
+}
+
+.metric span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.metric strong {
+  display: block;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.metric .ready {
+  color: var(--green);
+}
+
+.result-body {
+  padding: 20px 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 285px;
+  gap: 18px;
+}
+
+.change-list,
+.download-box,
+.preview-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.change-list {
+  padding: 16px;
+  min-height: 320px;
+}
+
+.download-box {
+  padding: 16px;
+  align-self: start;
+  position: sticky;
+  top: 94px;
+}
+
+.preview-card {
+  margin-top: 18px;
+  padding: 16px;
+}
+
+.change-list h3,
+.download-box h3,
+.preview-card h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.change-list ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.change-list li {
+  margin-bottom: 8px;
+  line-height: 1.45;
+  font-size: 13px;
+}
+
+.download-box a {
+  display: block;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 9px;
+  font-weight: 800;
+  color: var(--ink);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.download-box a:hover {
+  transform: translateY(-1px);
+  border-color: rgba(15, 123, 143, 0.40);
+}
+
+.download-box a.primary-link {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: white;
+}
+
+.placeholder {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.mini-resume-wrap {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+
 .mini-resume {
+  position: relative;
   display: grid;
   grid-template-columns: 32% 68%;
   width: 100%;
-  max-width: 420px;
+  max-width: 380px;
   min-height: 300px;
   border: 1px solid var(--line);
   background: white;
+  box-shadow: 0 12px 28px rgba(16, 42, 67, 0.10);
+  overflow: hidden;
+}
+
+.mini-resume::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 0%, transparent 42%, rgba(255,255,255,0.45) 50%, transparent 58%, transparent 100%);
+  transform: translateX(-100%);
+  animation: scan 3.4s ease-in-out infinite;
+}
+
+@keyframes scan {
+  0%, 35% {
+    transform: translateX(-100%);
+  }
+  65%, 100% {
+    transform: translateX(100%);
+  }
 }
 
 .mini-left {
@@ -481,7 +775,7 @@ textarea {
 }
 
 .mini-right strong {
-  color: var(--teal-dark);
+  color: var(--teal-2);
 }
 
 .mini-right .mini-line {
@@ -500,26 +794,36 @@ textarea {
   width: 96%;
 }
 
-@media (max-width: 980px) {
-  .workspace {
-    grid-template-columns: 1fr;
-    padding: 16px;
-  }
+.preview-notes {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
 
-  .score-strip,
+.preview-notes strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ink);
+}
+
+@media (max-width: 1080px) {
+  .hero,
+  .workspace,
   .result-body,
-  .steps,
-  .install-grid {
+  .mini-resume-wrap {
     grid-template-columns: 1fr;
   }
 
-  .metric {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
+  .download-box {
+    position: static;
   }
+}
 
+@media (max-width: 760px) {
   .topbar {
-    padding: 0 16px;
+    height: auto;
+    padding: 12px 16px;
+    gap: 12px;
   }
 
   .top-status {
@@ -528,6 +832,26 @@ textarea {
 
   .top-status .pill {
     display: none;
+  }
+
+  .hero,
+  .workspace {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .hero-card {
+    padding: 22px;
+  }
+
+  .score-strip,
+  .install-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
   }
 }
 </style>
@@ -545,20 +869,61 @@ textarea {
     <div class="top-status">
       <span class="pill">ATS scoring</span>
       <span class="pill">Word output</span>
-      <span class="pill">Production app</span>
+      <span class="pill">Installable app</span>
       <button id="install-app" class="install-button" type="button">Install app</button>
     </div>
   </header>
 
+  <section class="hero">
+    <div class="hero-card">
+      <div class="hero-content">
+        <div class="eyebrow">Resume intelligence for targeted applications</div>
+        <h1>Optimize each resume for the job you actually want.</h1>
+        <p>Upload your DOCX resume, paste the job description, and generate an ATS-focused Word document with score insights, missing keywords, and recruiter-ready formatting.</p>
+        <div class="hero-stats">
+          <div class="hero-stat"><strong>90%+</strong><span>target ATS alignment</span></div>
+          <div class="hero-stat"><strong>DOCX</strong><span>professional output</span></div>
+          <div class="hero-stat"><strong>PWA</strong><span>installable on devices</span></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="guide-card">
+      <h2>Guided workflow</h2>
+      <div class="guide-step">
+        <div class="guide-num">1</div>
+        <div><strong>Upload resume</strong><span>Start with your existing DOCX file.</span></div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">2</div>
+        <div><strong>Paste job description</strong><span>The model compares your resume against the target role.</span></div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">3</div>
+        <div><strong>Review and download</strong><span>Preview the result and export a polished Word document.</span></div>
+      </div>
+    </aside>
+  </section>
+
   <main class="workspace">
     <section class="panel intake">
-      <h1>Resume Optimization Workspace</h1>
-      <p class="intake-copy">Upload a DOCX resume, match it to a job description, and generate a recruiter-ready Word document.</p>
+      <div class="section-kicker">Optimizer input</div>
+      <h2>Build your targeted resume</h2>
+      <p class="intake-copy">Keep the fields below the same as your current workflow. The design is new; the model behavior stays unchanged.</p>
 
       <div class="steps">
-        <div class="step"><strong>1. Upload</strong><span>Use your existing DOCX resume.</span></div>
-        <div class="step"><strong>2. Analyze</strong><span>Compare against the target job description.</span></div>
-        <div class="step"><strong>3. Download</strong><span>Export the optimized Word document.</span></div>
+        <div class="step">
+          <div class="step-icon">01</div>
+          <div><strong>Resume file</strong><span>DOCX format keeps extraction reliable.</span></div>
+        </div>
+        <div class="step">
+          <div class="step-icon">02</div>
+          <div><strong>Job description</strong><span>Paste the full JD for stronger matching.</span></div>
+        </div>
+        <div class="step">
+          <div class="step-icon">03</div>
+          <div><strong>Word export</strong><span>Download a ready-to-edit document.</span></div>
+        </div>
       </div>
 
       <form id="form">
@@ -597,8 +962,8 @@ textarea {
             <p>Use Chrome or Edge and click the install icon in the address bar.</p>
           </div>
           <div class="install-card">
-            <strong>App Stores</strong>
-            <p>Use the same web app as a wrapper for Play Store, App Store, and desktop builds.</p>
+            <strong>Production</strong>
+            <p>Runs as a deployed web app with health checks and install metadata.</p>
           </div>
         </div>
       </div>
@@ -607,9 +972,11 @@ textarea {
     <section class="panel results">
       <div class="results-head">
         <div>
+          <div class="section-kicker">Live analysis</div>
           <h2>Optimization Results</h2>
           <p id="result-subtitle">Run an analysis to view ATS score, changes, preview, and Word download.</p>
         </div>
+        <div class="live-badge"><span class="live-dot"></span><span id="result-state">Ready</span></div>
       </div>
 
       <div class="score-strip">
@@ -626,8 +993,8 @@ textarea {
           <strong id="keyword-count">--</strong>
         </div>
         <div class="metric">
-          <span>Status</span>
-          <strong id="result-state">Ready</strong>
+          <span>Output</span>
+          <strong>DOCX</strong>
         </div>
       </div>
 
@@ -640,33 +1007,39 @@ textarea {
 
           <div class="preview-card">
             <h3>Resume Preview</h3>
-            <div class="mini-resume" aria-hidden="true">
-              <div class="mini-left">
-                <strong>PROFILE</strong>
-                <div class="mini-line long"></div>
-                <div class="mini-line medium"></div>
-                <div class="mini-line short"></div>
-                <br>
-                <strong>SKILLS</strong>
-                <div class="mini-line long"></div>
-                <div class="mini-line medium"></div>
-                <div class="mini-line long"></div>
-                <div class="mini-line short"></div>
+            <div class="mini-resume-wrap">
+              <div class="mini-resume" aria-hidden="true">
+                <div class="mini-left">
+                  <strong>PROFILE</strong>
+                  <div class="mini-line long"></div>
+                  <div class="mini-line medium"></div>
+                  <div class="mini-line short"></div>
+                  <br>
+                  <strong>SKILLS</strong>
+                  <div class="mini-line long"></div>
+                  <div class="mini-line medium"></div>
+                  <div class="mini-line long"></div>
+                  <div class="mini-line short"></div>
+                </div>
+                <div class="mini-right">
+                  <strong>SUMMARY</strong>
+                  <div class="mini-line long"></div>
+                  <div class="mini-line long"></div>
+                  <div class="mini-line medium"></div>
+                  <br>
+                  <strong>EXPERIENCE</strong>
+                  <div class="mini-line long"></div>
+                  <div class="mini-line medium"></div>
+                  <div class="mini-line long"></div>
+                  <br>
+                  <strong>PROJECTS</strong>
+                  <div class="mini-line medium"></div>
+                  <div class="mini-line short"></div>
+                </div>
               </div>
-              <div class="mini-right">
-                <strong>SUMMARY</strong>
-                <div class="mini-line long"></div>
-                <div class="mini-line long"></div>
-                <div class="mini-line medium"></div>
-                <br>
-                <strong>EXPERIENCE</strong>
-                <div class="mini-line long"></div>
-                <div class="mini-line medium"></div>
-                <div class="mini-line long"></div>
-                <br>
-                <strong>PROJECTS</strong>
-                <div class="mini-line medium"></div>
-                <div class="mini-line short"></div>
+              <div class="preview-notes">
+                <strong>What happens after analysis?</strong>
+                You get a targeted resume preview, ATS improvement notes, and a professionally formatted Word document that can be edited before applying.
               </div>
             </div>
           </div>
