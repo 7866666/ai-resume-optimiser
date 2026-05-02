@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f2538">
+<meta name="description" content="AI resume optimizer with ATS scoring, job-description matching, resume preview, and Word document output.">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/app-icon.svg" type="image/svg+xml">
+<title>ResumeFit Pro</title>
+<style>
+:root {
+  --ink: #172033;
+  --muted: #607083;
+  --page: #f3f6f9;
+  --panel: #ffffff;
+  --line: #d8e1ea;
+  --navy: #0f2538;
+  --teal: #0e7490;
+  --teal-dark: #0b5f73;
+  --amber: #b7791f;
+  --green: #047857;
+  --red: #b42318;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--page);
+  color: var(--ink);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: var(--teal-dark);
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.topbar {
+  height: 66px;
+  background: var(--navy);
+  color: #ffffff;
+  border-bottom: 4px solid var(--teal);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand img {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+}
+
+.brand-title {
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.brand-subtitle {
+  font-size: 12px;
+  color: #bfd5df;
+  margin-top: 3px;
+}
+
+.top-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #cbd5e1;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.pill {
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 999px;
+  padding: 7px 10px;
+}
+
+.workspace {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 420px minmax(0, 1fr);
+  gap: 22px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.intake {
+  padding: 20px;
+}
+
+.intake h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.intake-copy {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.step {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  min-height: 78px;
+  background: #fbfcfd;
+}
+
+.step strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+
+.step span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+form {
+  display: grid;
+  gap: 14px;
+}
+
+label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+label span {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid #c2ccd8;
+  border-radius: 6px;
+  padding: 11px 12px;
+  color: var(--ink);
+  background: white;
+}
+
+input:focus,
+textarea:focus {
+  outline: 3px solid rgba(14, 116, 144, 0.18);
+  border-color: var(--teal);
+}
+
+textarea {
+  min-height: 270px;
+  resize: vertical;
+}
+
+.button-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.primary,
+.secondary {
+  border-radius: 6px;
+  padding: 12px 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--teal);
+  color: white;
+  border: 1px solid var(--teal);
+}
+
+.primary:hover {
+  background: var(--teal-dark);
+}
+
+.secondary {
+  background: white;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+#status {
+  margin-top: 14px;
+  min-height: 22px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+#status.error {
+  color: var(--red);
+}
+
+#status.loading::after {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: 8px;
+  border: 2px solid #cbd5e1;
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: -2px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.results {
+  min-height: 740px;
+  overflow: hidden;
+}
+
+.results-head {
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.results-head h2 {
+  margin: 0 0 5px;
+  font-size: 20px;
+}
+
+.results-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.score-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
+}
+
+.metric {
+  padding: 18px 20px;
+  border-right: 1px solid var(--line);
+}
+
+.metric:last-child {
+  border-right: 0;
+}
+
+.metric span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.metric strong {
+  display: block;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.metric .ready {
+  color: var(--green);
+}
+
+.result-body {
+  padding: 20px 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 275px;
+  gap: 18px;
+}
+
+.change-list,
+.download-box,
+.preview-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.change-list {
+  padding: 16px;
+  min-height: 320px;
+}
+
+.download-box {
+  padding: 16px;
+  align-self: start;
+}
+
+.preview-card {
+  margin-top: 18px;
+  padding: 16px;
+}
+
+.change-list h3,
+.download-box h3,
+.preview-card h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.change-list ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.change-list li {
+  margin-bottom: 8px;
+  line-height: 1.45;
+  font-size: 13px;
+}
+
+.download-box a {
+  display: block;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 11px 12px;
+  margin-bottom: 9px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.download-box a.primary-link {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: white;
+}
+
+.placeholder {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.mini-resume {
+  display: grid;
+  grid-template-columns: 32% 68%;
+  width: 100%;
+  max-width: 420px;
+  min-height: 300px;
+  border: 1px solid var(--line);
+  background: white;
+}
+
+.mini-left {
+  background: var(--navy);
+  color: white;
+  padding: 14px 12px;
+}
+
+.mini-left strong,
+.mini-right strong {
+  display: block;
+  font-size: 9px;
+  margin-bottom: 8px;
+}
+
+.mini-line {
+  height: 5px;
+  background: currentColor;
+  opacity: 0.85;
+  border-radius: 999px;
+  margin-bottom: 7px;
+}
+
+.mini-left .mini-line {
+  color: white;
+}
+
+.mini-right {
+  padding: 16px;
+}
+
+.mini-right strong {
+  color: var(--teal-dark);
+}
+
+.mini-right .mini-line {
+  color: #91a0ad;
+}
+
+.mini-line.short {
+  width: 62%;
+}
+
+.mini-line.medium {
+  width: 80%;
+}
+
+.mini-line.long {
+  width: 96%;
+}
+
+@media (max-width: 980px) {
+  .workspace {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .score-strip,
+  .result-body,
+  .steps {
+    grid-template-columns: 1fr;
+  }
+
+  .metric {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .topbar {
+    padding: 0 16px;
+  }
+
+  .top-status {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand">
+      <img src="/app-icon.svg" alt="ResumeFit Pro">
+      <div>
+        <div class="brand-title">ResumeFit Pro</div>
+        <div class="brand-subtitle">AI resume optimizer</div>
+      </div>
+    </div>
+    <div class="top-status">
+      <span class="pill">ATS scoring</span>
+      <span class="pill">Word output</span>
+      <span class="pill">Production app</span>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="panel intake">
+      <h1>Resume Optimization Workspace</h1>
+      <p class="intake-copy">Upload a DOCX resume, match it to a job description, and generate a recruiter-ready Word document.</p>
+
+      <div class="steps">
+        <div class="step"><strong>1. Upload</strong><span>Use your existing DOCX resume.</span></div>
+        <div class="step"><strong>2. Analyze</strong><span>Compare against the target job description.</span></div>
+        <div class="step"><strong>3. Download</strong><span>Export the optimized Word document.</span></div>
+      </div>
+
+      <form id="form">
+        <div>
+          <label for="api_key">Gemini API key <span>optional if configured</span></label>
+          <input id="api_key" name="api_key" type="password" autocomplete="off" placeholder="Paste key if server env is not set">
+        </div>
+        <div>
+          <label for="resume_file">Existing resume <span>.docx</span></label>
+          <input id="resume_file" name="resume_file" type="file" accept=".docx" required>
+        </div>
+        <div>
+          <label for="jd">Job description <span>target role</span></label>
+          <textarea id="jd" name="jd" required placeholder="Paste the full job description here"></textarea>
+        </div>
+        <div class="button-row">
+          <button class="primary" type="submit">Analyze and optimize</button>
+          <button class="secondary" type="reset">Clear</button>
+        </div>
+      </form>
+      <div id="status"></div>
+    </section>
+
+    <section class="panel results">
+      <div class="results-head">
+        <div>
+          <h2>Optimization Results</h2>
+          <p id="result-subtitle">Run an analysis to view ATS score, changes, preview, and Word download.</p>
+        </div>
+      </div>
+
+      <div class="score-strip">
+        <div class="metric">
+          <span>Current ATS</span>
+          <strong id="current-score">--</strong>
+        </div>
+        <div class="metric">
+          <span>Optimized Target</span>
+          <strong id="target-score" class="ready">--</strong>
+        </div>
+        <div class="metric">
+          <span>Missing Keywords</span>
+          <strong id="keyword-count">--</strong>
+        </div>
+        <div class="metric">
+          <span>Status</span>
+          <strong id="result-state">Ready</strong>
+        </div>
+      </div>
+
+      <div class="result-body">
+        <div>
+          <div class="change-list">
+            <h3>Recommended Changes</h3>
+            <div id="changes" class="placeholder">No analysis yet.</div>
+          </div>
+
+          <div class="preview-card">
+            <h3>Resume Preview</h3>
+            <div class="mini-resume" aria-hidden="true">
+              <div class="mini-left">
+                <strong>PROFILE</strong>
+                <div class="mini-line long"></div>
+                <div class="mini-line medium"></div>
+                <div class="mini-line short"></div>
+                <br>
+                <strong>SKILLS</strong>
+                <div class="mini-line long"></div>
+                <div class="mini-line medium"></div>
+                <div class="mini-line long"></div>
+                <div class="mini-line short"></div>
+              </div>
+              <div class="mini-right">
+                <strong>SUMMARY</strong>
+                <div class="mini-line long"></div>
+                <div class="mini-line long"></div>
+                <div class="mini-line medium"></div>
+                <br>
+                <strong>EXPERIENCE</strong>
+                <div class="mini-line long"></div>
+                <div class="mini-line medium"></div>
+                <div class="mini-line long"></div>
+                <br>
+                <strong>PROJECTS</strong>
+                <div class="mini-line medium"></div>
+                <div class="mini-line short"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="download-box">
+          <h3>Outputs</h3>
+          <div id="downloads" class="placeholder">Downloads appear after optimization.</div>
+        </aside>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const form = document.getElementById("form");
+const statusBox = document.getElementById("status");
+const currentScore = document.getElementById("current-score");
+const targetScore = document.getElementById("target-score");
+const keywordCount = document.getElementById("keyword-count");
+const resultState = document.getElementById("result-state");
+const changesBox = document.getElementById("changes");
+const downloadsBox = document.getElementById("downloads");
+const resultSubtitle = document.getElementById("result-subtitle");
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+form.addEventListener("reset", () => {
+  statusBox.className = "";
+  statusBox.textContent = "";
+  currentScore.textContent = "--";
+  targetScore.textContent = "--";
+  keywordCount.textContent = "--";
+  resultState.textContent = "Ready";
+  resultSubtitle.textContent = "Run an analysis to view ATS score, changes, preview, and Word download.";
+  changesBox.className = "placeholder";
+  changesBox.textContent = "No analysis yet.";
+  downloadsBox.className = "placeholder";
+  downloadsBox.textContent = "Downloads appear after optimization.";
+});
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  statusBox.className = "loading";
+  statusBox.textContent = "Analyzing and optimizing. This can take up to 60 seconds...";
+  resultState.textContent = "Working";
+
+  const body = new FormData(form);
+  let response;
+  let data;
+
+  try {
+    response = await fetch("/optimize", { method: "POST", body });
+    data = await response.json();
+  } catch (error) {
+    statusBox.className = "error";
+    statusBox.textContent = "Request failed. Please retry after the app finishes waking up.";
+    resultState.textContent = "Error";
+    return;
+  }
+
+  statusBox.className = "";
+
+  if (!response.ok) {
+    statusBox.className = "error";
+    statusBox.textContent = data.error || "Something went wrong.";
+    resultState.textContent = "Error";
+    return;
+  }
+
+  const changes = data.changes_to_make || [];
+  const missing = data.missing_keywords || [];
+
+  currentScore.textContent = `${data.current_ats_score}%`;
+  targetScore.textContent = `${data.target_ats_score}%+`;
+  keywordCount.textContent = missing.length;
+  resultState.textContent = "Complete";
+  resultSubtitle.textContent = "Review recommendations, preview the resume, or download the Word document.";
+  statusBox.textContent = "Optimization complete.";
+
+  changesBox.className = "";
+  changesBox.innerHTML = changes.length
+    ? `<ul>${changes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+    : "No additional changes returned.";
+
+  downloadsBox.className = "";
+  downloadsBox.innerHTML = `
+    <a href="${data.download_docx}" class="primary-link">Download Word document</a>
+    <a href="${data.preview_url}">Preview optimized resume</a>
+    <a href="${data.analysis_url}">View full analysis</a>
+  `;
+});
+</script>
+</body>
+</html>

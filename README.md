@@ -2,6 +2,8 @@
 
 Professional ATS resume optimizer built with FastAPI. Users upload a DOCX resume, paste a job description, review ATS recommendations, preview the optimized resume, and download a formatted Word document.
 
+The app includes a production-ready responsive interface, installable web app metadata, an app icon, service worker, health check endpoint, and Render deployment configuration.
+
 ## Local Run
 
 ```bat
@@ -50,6 +52,13 @@ Health check:
 ```text
 /health
 ```
+
+## App Files
+
+- `index.html` - user-facing web application
+- `manifest.json` - installable app metadata
+- `service-worker.js` - lightweight app shell caching
+- `app-icon.svg` - app icon
 
 ## Docker
 
