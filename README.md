@@ -25,7 +25,14 @@ Set environment variables:
 ```text
 GEMINI_API_KEY=your_key
 GEMINI_MODEL=gemini-3-flash-preview
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+DOWNLOAD_TOKEN_SECRET=use_a_long_random_secret
+OWNER_EMAILS=sumitmishra7886@gmail.com
+RESUME_PRICE_RUPEES=49
 ```
+
+Downloads are payment-gated at Rs 49 per optimized resume. Emails listed in `OWNER_EMAILS` are exempt and receive a free download unlock after optimization.
 
 Start command:
 

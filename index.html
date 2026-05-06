@@ -690,15 +690,47 @@ textarea {
   transition: transform 0.18s ease, border-color 0.18s ease;
 }
 
+.download-box button {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 9px;
+  background: var(--navy);
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
 .download-box a:hover {
   transform: translateY(-1px);
   border-color: rgba(15, 123, 143, 0.40);
+}
+
+.download-box button:hover {
+  transform: translateY(-1px);
+  background: var(--navy-2);
 }
 
 .download-box a.primary-link {
   background: var(--navy);
   border-color: var(--navy);
   color: white;
+}
+
+.download-note {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.download-price {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .placeholder {
@@ -932,6 +964,10 @@ textarea {
           <input id="resume_file" name="resume_file" type="file" accept=".docx" required>
         </div>
         <div>
+          <label for="user_email">Email <span>for download access</span></label>
+          <input id="user_email" name="user_email" type="email" required placeholder="you@example.com">
+        </div>
+        <div>
           <label for="jd">Job description <span>target role</span></label>
           <textarea id="jd" name="jd" required placeholder="Paste the full job description here"></textarea>
         </div>
@@ -1062,6 +1098,8 @@ const downloadsBox = document.getElementById("downloads");
 const resultSubtitle = document.getElementById("result-subtitle");
 const installButton = document.getElementById("install-app");
 let deferredInstallPrompt = null;
+let activeResume = null;
+let activeDownloadToken = "";
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/service-worker.js").catch(() => {});
@@ -1093,7 +1131,144 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function withToken(url, token) {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}token=${encodeURIComponent(token)}`;
+}
+
+function loadRazorpayCheckout() {
+  return new Promise((resolve, reject) => {
+    if (window.Razorpay) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("Unable to load Razorpay checkout"));
+    document.head.appendChild(script);
+  });
+}
+
+function renderDownloadLinks(data, token) {
+  downloadsBox.className = "";
+  downloadsBox.innerHTML = `
+    <a href="${withToken(data.download_docx, token)}" class="primary-link">Download Word document</a>
+    <a href="${withToken(data.download_pdf, token)}">Download PDF</a>
+    <a href="${data.preview_url}">Preview optimized resume</a>
+    <a href="${data.analysis_url}">View full analysis</a>
+  `;
+}
+
+async function startPayment() {
+  if (!activeResume) {
+    return;
+  }
+
+  const email = document.getElementById("user_email").value.trim();
+  statusBox.className = "loading";
+  statusBox.textContent = "Preparing secure payment...";
+
+  const orderResponse = await fetch("/payment/order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ resume_id: activeResume.id, email }),
+  });
+  const order = await orderResponse.json();
+
+  if (!orderResponse.ok) {
+    statusBox.className = "error";
+    statusBox.textContent = order.error || "Unable to start payment.";
+    return;
+  }
+
+  if (order.owner_exempt) {
+    activeDownloadToken = order.download_token;
+    statusBox.className = "";
+    statusBox.textContent = "Owner download unlocked.";
+    renderDownloadLinks(activeResume, activeDownloadToken);
+    return;
+  }
+
+  await loadRazorpayCheckout();
+
+  const checkout = new window.Razorpay({
+    key: order.key_id,
+    amount: order.amount_paise,
+    currency: order.currency,
+    name: "ResumeFit Pro",
+    description: `Resume download - Rs ${order.amount_rupees}`,
+    order_id: order.order_id,
+    prefill: { email },
+    theme: { color: "#102a43" },
+    handler: async (payment) => {
+      statusBox.className = "loading";
+      statusBox.textContent = "Verifying payment...";
+
+      const verifyResponse = await fetch("/payment/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resume_id: activeResume.id,
+          email,
+          razorpay_order_id: payment.razorpay_order_id,
+          razorpay_payment_id: payment.razorpay_payment_id,
+          razorpay_signature: payment.razorpay_signature,
+        }),
+      });
+      const verified = await verifyResponse.json();
+
+      if (!verifyResponse.ok) {
+        statusBox.className = "error";
+        statusBox.textContent = verified.error || "Payment verification failed.";
+        return;
+      }
+
+      activeDownloadToken = verified.download_token;
+      statusBox.className = "";
+      statusBox.textContent = "Payment complete. Downloads are unlocked.";
+      renderDownloadLinks(activeResume, activeDownloadToken);
+    },
+    modal: {
+      ondismiss: () => {
+        statusBox.className = "";
+        statusBox.textContent = "Payment was cancelled. Downloads remain locked.";
+      },
+    },
+  });
+
+  checkout.open();
+}
+
+function renderPaymentPrompt(data) {
+  activeResume = data;
+  activeDownloadToken = data.download_token || "";
+
+  if (activeDownloadToken) {
+    renderDownloadLinks(data, activeDownloadToken);
+    return;
+  }
+
+  downloadsBox.className = "";
+  downloadsBox.innerHTML = `
+    <p class="download-price">Rs ${data.price_rupees} per resume</p>
+    <p class="download-note">Preview and analysis are free. Complete payment once to unlock Word and PDF downloads for this optimized resume.</p>
+    <button type="button" id="pay-download">Pay and unlock download</button>
+    <a href="${data.preview_url}">Preview optimized resume</a>
+    <a href="${data.analysis_url}">View full analysis</a>
+  `;
+  document.getElementById("pay-download").addEventListener("click", () => {
+    startPayment().catch(() => {
+      statusBox.className = "error";
+      statusBox.textContent = "Payment could not be completed. Please try again.";
+    });
+  });
+}
+
 form.addEventListener("reset", () => {
+  activeResume = null;
+  activeDownloadToken = "";
   statusBox.className = "";
   statusBox.textContent = "";
   currentScore.textContent = "--";
@@ -1152,11 +1327,7 @@ form.addEventListener("submit", async (event) => {
     : "No additional changes returned.";
 
   downloadsBox.className = "";
-  downloadsBox.innerHTML = `
-    <a href="${data.download_docx}" class="primary-link">Download Word document</a>
-    <a href="${data.preview_url}">Preview optimized resume</a>
-    <a href="${data.analysis_url}">View full analysis</a>
-  `;
+  renderPaymentPrompt(data);
 });
 </script>
 </body>

@@ -1,10 +1,13 @@
 import html
+import hashlib
+import hmac
 import json
 import os
 import re
 import sqlite3
 import subprocess
 import tempfile
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from html.parser import HTMLParser
@@ -14,8 +17,13 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+
+try:
+    import razorpay
+except ImportError:
+    razorpay = None
 
 
 # ================= CONFIG =================
@@ -58,6 +66,28 @@ def get_gemini_api_key(submitted_key: str | None = None) -> str:
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
 GEMINI_API_KEY = get_gemini_api_key()
+
+RESUME_PRICE_RUPEES = int(os.getenv("RESUME_PRICE_RUPEES", "49"))
+RESUME_PRICE_PAISE = RESUME_PRICE_RUPEES * 100
+OWNER_EMAILS = {
+    email.strip().lower()
+    for email in os.getenv("OWNER_EMAILS", "sumitmishra7886@gmail.com").split(",")
+    if email.strip()
+}
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "")
+DOWNLOAD_TOKEN_SECRET = (
+    os.getenv("DOWNLOAD_TOKEN_SECRET")
+    or RAZORPAY_KEY_SECRET
+    or GEMINI_API_KEY
+    or "resume-fit-pro-local-download-secret"
+)
+PAYMENTS_ENABLED = bool(RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET and razorpay)
+razorpay_client = (
+    razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+    if PAYMENTS_ENABLED
+    else None
+)
 
 if GEMINI_API_KEY:
     pass
@@ -183,6 +213,22 @@ CREATE TABLE IF NOT EXISTS resumes (
 )
 """
             )
+            database.execute(
+                """
+CREATE TABLE IF NOT EXISTS payments (
+    id TEXT PRIMARY KEY,
+    resume_id TEXT NOT NULL,
+    email TEXT NOT NULL,
+    amount_paise INTEGER NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'INR',
+    status TEXT NOT NULL,
+    razorpay_order_id TEXT,
+    razorpay_payment_id TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    paid_at TIMESTAMP
+)
+"""
+            )
             database.commit()
 
             try:
@@ -200,6 +246,80 @@ CREATE TABLE IF NOT EXISTS resumes (
 
 conn = connect_db()
 cursor = conn.cursor()
+
+
+# ================= PAYMENTS =================
+
+def normalize_email(email: str | None) -> str:
+    return (email or "").strip().lower()
+
+
+def is_owner_email(email: str | None) -> bool:
+    normalized = normalize_email(email)
+    return bool(normalized and normalized in OWNER_EMAILS)
+
+
+def make_download_token(fid: str, email: str, ttl_seconds: int = 3600) -> str:
+    expires_at = int(time.time()) + ttl_seconds
+    normalized_email = normalize_email(email)
+    payload = f"{fid}|{normalized_email}|{expires_at}"
+    signature = hmac.new(
+        DOWNLOAD_TOKEN_SECRET.encode("utf-8"),
+        payload.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{payload}|{signature}"
+
+
+def verify_download_token(fid: str, token: str | None) -> bool:
+    if not token:
+        return False
+
+    parts = token.split("|")
+    if len(parts) != 4:
+        return False
+
+    token_fid, email, expires_at_text, signature = parts
+    if token_fid != fid:
+        return False
+
+    try:
+        expires_at = int(expires_at_text)
+    except ValueError:
+        return False
+
+    if expires_at < int(time.time()):
+        return False
+
+    payload = f"{token_fid}|{email}|{expires_at}"
+    expected = hmac.new(
+        DOWNLOAD_TOKEN_SECRET.encode("utf-8"),
+        payload.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(signature, expected)
+
+
+def resume_exists(fid: str) -> bool:
+    cursor.execute("SELECT 1 FROM resumes WHERE id=?", (fid,))
+    return bool(cursor.fetchone())
+
+
+def payment_required_response():
+    return JSONResponse(
+        status_code=402,
+        content={
+            "error": "Payment required",
+            "amount_rupees": RESUME_PRICE_RUPEES,
+            "currency": "INR",
+        },
+    )
+
+
+def require_download_access(fid: str, token: str | None):
+    if verify_download_token(fid, token):
+        return None
+    return payment_required_response()
 
 
 # ================= DOCX =================
@@ -1524,11 +1644,133 @@ def app_icon():
     return FileResponse(APP_ICON_PATH, media_type="image/svg+xml")
 
 
+@app.get("/payment/config")
+def payment_config():
+    return {
+        "enabled": PAYMENTS_ENABLED,
+        "key_id": RAZORPAY_KEY_ID if PAYMENTS_ENABLED else "",
+        "amount_rupees": RESUME_PRICE_RUPEES,
+        "currency": "INR",
+        "owner_emails": sorted(OWNER_EMAILS),
+    }
+
+
+@app.post("/payment/order")
+async def create_payment_order(request: Request):
+    payload = await request.json()
+    fid = str(payload.get("resume_id", "")).strip()
+    email = normalize_email(payload.get("email"))
+
+    if not fid or not resume_exists(fid):
+        return JSONResponse(status_code=404, content={"error": "Resume not found"})
+
+    if not email:
+        return JSONResponse(status_code=400, content={"error": "Email is required"})
+
+    if is_owner_email(email):
+        return {
+            "owner_exempt": True,
+            "download_token": make_download_token(fid, email),
+            "amount_rupees": 0,
+            "currency": "INR",
+        }
+
+    if not PAYMENTS_ENABLED or not razorpay_client:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "Payments are not configured. Add Razorpay keys in environment variables.",
+            },
+        )
+
+    receipt = f"resume_{fid}_{uuid.uuid4().hex[:10]}"
+    order = razorpay_client.order.create(
+        {
+            "amount": RESUME_PRICE_PAISE,
+            "currency": "INR",
+            "receipt": receipt,
+            "payment_capture": 1,
+            "notes": {"resume_id": fid, "email": email},
+        }
+    )
+
+    cursor.execute(
+        """
+        INSERT INTO payments (id, resume_id, email, amount_paise, currency, status, razorpay_order_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (str(uuid.uuid4()), fid, email, RESUME_PRICE_PAISE, "INR", "created", order["id"]),
+    )
+    conn.commit()
+
+    return {
+        "owner_exempt": False,
+        "key_id": RAZORPAY_KEY_ID,
+        "order_id": order["id"],
+        "amount_paise": RESUME_PRICE_PAISE,
+        "amount_rupees": RESUME_PRICE_RUPEES,
+        "currency": "INR",
+    }
+
+
+@app.post("/payment/verify")
+async def verify_payment(request: Request):
+    payload = await request.json()
+    fid = str(payload.get("resume_id", "")).strip()
+    email = normalize_email(payload.get("email"))
+    order_id = str(payload.get("razorpay_order_id", "")).strip()
+    payment_id = str(payload.get("razorpay_payment_id", "")).strip()
+    signature = str(payload.get("razorpay_signature", "")).strip()
+
+    if not fid or not email or not order_id or not payment_id or not signature:
+        return JSONResponse(status_code=400, content={"error": "Payment verification details are incomplete"})
+
+    if not PAYMENTS_ENABLED or not razorpay_client:
+        return JSONResponse(status_code=503, content={"error": "Payments are not configured"})
+
+    try:
+        razorpay_client.utility.verify_payment_signature(
+            {
+                "razorpay_order_id": order_id,
+                "razorpay_payment_id": payment_id,
+                "razorpay_signature": signature,
+            }
+        )
+    except Exception:
+        cursor.execute(
+            "UPDATE payments SET status=? WHERE razorpay_order_id=?",
+            ("failed", order_id),
+        )
+        conn.commit()
+        return JSONResponse(status_code=400, content={"error": "Payment verification failed"})
+
+    cursor.execute(
+        """
+        UPDATE payments
+        SET status=?, razorpay_payment_id=?, paid_at=CURRENT_TIMESTAMP
+        WHERE razorpay_order_id=? AND resume_id=? AND email=?
+        """,
+        ("paid", payment_id, order_id, fid, email),
+    )
+    conn.commit()
+
+    if cursor.rowcount == 0:
+        return JSONResponse(status_code=404, content={"error": "Payment record not found"})
+
+    return {
+        "paid": True,
+        "download_token": make_download_token(fid, email),
+        "download_docx": f"/docx/{fid}",
+        "download_pdf": f"/pdf/{fid}",
+    }
+
+
 @app.post("/optimize")
 async def optimize_resume(
     resume_file: UploadFile = File(...),
     jd: str = Form(...),
     api_key: str | None = Form(None),
+    user_email: str | None = Form(None),
 ):
     api_key = get_gemini_api_key(api_key)
     if not api_key:
@@ -1571,6 +1813,10 @@ async def optimize_resume(
     )
     conn.commit()
 
+    normalized_user_email = normalize_email(user_email)
+    owner_exempt = is_owner_email(normalized_user_email)
+    download_token = make_download_token(fid, normalized_user_email) if owner_exempt else ""
+
     return {
         "id": fid,
         "current_ats_score": analysis["current_ats_score"],
@@ -1584,6 +1830,12 @@ async def optimize_resume(
         "preview_url": f"/preview/{fid}",
         "download_pdf": f"/pdf/{fid}",
         "download_docx": f"/docx/{fid}",
+        "payment_required": not owner_exempt,
+        "payments_enabled": PAYMENTS_ENABLED,
+        "price_rupees": RESUME_PRICE_RUPEES,
+        "currency": "INR",
+        "owner_exempt": owner_exempt,
+        "download_token": download_token,
     }
 
 
@@ -1614,12 +1866,16 @@ def preview(fid: str):
 # ================= PDF =================
 
 @app.get("/pdf/{fid}")
-def download_pdf(fid: str):
+def download_pdf(fid: str, token: str | None = None):
     cursor.execute("SELECT html FROM resumes WHERE id=?", (fid,))
     row = cursor.fetchone()
 
     if not row:
         return JSONResponse(status_code=404, content={"error": "Not found"})
+
+    access_error = require_download_access(fid, token)
+    if access_error:
+        return access_error
 
     rendered_html = row[0]
     pdf_path = os.path.join(OUTPUT_DIR, f"{fid}.pdf")
@@ -1630,12 +1886,16 @@ def download_pdf(fid: str):
 
 
 @app.get("/docx/{fid}")
-def download_docx(fid: str):
+def download_docx(fid: str, token: str | None = None):
     cursor.execute("SELECT html, analysis_json FROM resumes WHERE id=?", (fid,))
     row = cursor.fetchone()
 
     if not row:
         return JSONResponse(status_code=404, content={"error": "Not found"})
+
+    access_error = require_download_access(fid, token)
+    if access_error:
+        return access_error
 
     rendered_html = row[0]
     analysis = json.loads(row[1] or "{}")
