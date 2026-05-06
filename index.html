@@ -1580,6 +1580,14 @@ async function startPayment() {
     return;
   }
 
+  if (order.free_trial) {
+    activeDownloadToken = order.download_token;
+    statusBox.className = "";
+    statusBox.textContent = `Free trial used. ${order.free_trials_remaining} free download${order.free_trials_remaining === 1 ? "" : "s"} remaining.`;
+    renderDownloadLinks(activeResume, activeDownloadToken);
+    return;
+  }
+
   await loadRazorpayCheckout();
 
   const checkout = new window.Razorpay({
@@ -1640,10 +1648,11 @@ function renderPaymentPrompt(data) {
   }
 
   downloadsBox.className = "";
+  const hasFreeTrial = Number(data.free_trials_remaining || 0) > 0;
   downloadsBox.innerHTML = `
-    <p class="download-price">Rs ${data.price_rupees} per resume</p>
-    <p class="download-note">Preview and analysis are free. Complete payment once to unlock Word and PDF downloads for this optimized resume.</p>
-    <button type="button" id="pay-download">Pay and unlock download</button>
+    <p class="download-price">${hasFreeTrial ? `${data.free_trials_remaining} free trial${data.free_trials_remaining === 1 ? "" : "s"} left` : `Rs ${data.price_rupees} per resume`}</p>
+    <p class="download-note">${hasFreeTrial ? "Use a free trial to unlock Word and PDF downloads for this optimized resume. Payment starts after your free trials are used." : "Preview and analysis are free. Complete payment once to unlock Word and PDF downloads for this optimized resume."}</p>
+    <button type="button" id="pay-download">${hasFreeTrial ? "Use free trial download" : "Pay and unlock download"}</button>
     <a href="${data.preview_url}">Preview optimized resume</a>
     <a href="${data.analysis_url}">View full analysis</a>
   `;

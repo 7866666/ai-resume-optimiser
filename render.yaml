@@ -21,3 +21,5 @@ services:
         value: sumitmishra7886@gmail.com
       - key: RESUME_PRICE_RUPEES
         value: "49"
+      - key: FREE_TRIAL_RESUMES
+        value: "3"

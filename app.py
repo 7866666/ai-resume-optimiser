@@ -69,6 +69,7 @@ GEMINI_API_KEY = get_gemini_api_key()
 
 RESUME_PRICE_RUPEES = int(os.getenv("RESUME_PRICE_RUPEES", "49"))
 RESUME_PRICE_PAISE = RESUME_PRICE_RUPEES * 100
+FREE_TRIAL_RESUMES = int(os.getenv("FREE_TRIAL_RESUMES", "3"))
 OWNER_EMAILS = {
     email.strip().lower()
     for email in os.getenv("OWNER_EMAILS", "sumitmishra7886@gmail.com").split(",")
@@ -230,6 +231,17 @@ CREATE TABLE IF NOT EXISTS payments (
 )
 """
             )
+            database.execute(
+                """
+CREATE TABLE IF NOT EXISTS free_downloads (
+    id TEXT PRIMARY KEY,
+    resume_id TEXT NOT NULL,
+    email TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(resume_id, email)
+)
+"""
+            )
             database.commit()
 
             try:
@@ -304,6 +316,50 @@ def verify_download_token(fid: str, token: str | None) -> bool:
 def resume_exists(fid: str) -> bool:
     cursor.execute("SELECT 1 FROM resumes WHERE id=?", (fid,))
     return bool(cursor.fetchone())
+
+
+def free_trial_status(email: str, fid: str | None = None) -> dict:
+    normalized_email = normalize_email(email)
+    if not normalized_email or FREE_TRIAL_RESUMES <= 0:
+        return {"limit": FREE_TRIAL_RESUMES, "used": 0, "remaining": 0, "resume_unlocked": False}
+
+    cursor.execute(
+        "SELECT COUNT(DISTINCT resume_id) FROM free_downloads WHERE email=?",
+        (normalized_email,),
+    )
+    used = int(cursor.fetchone()[0] or 0)
+    resume_unlocked = False
+
+    if fid:
+        cursor.execute(
+            "SELECT 1 FROM free_downloads WHERE email=? AND resume_id=?",
+            (normalized_email, fid),
+        )
+        resume_unlocked = bool(cursor.fetchone())
+
+    remaining = max(FREE_TRIAL_RESUMES - used, 0)
+    return {
+        "limit": FREE_TRIAL_RESUMES,
+        "used": used,
+        "remaining": remaining,
+        "resume_unlocked": resume_unlocked,
+    }
+
+
+def can_use_free_trial(email: str, fid: str) -> bool:
+    status = free_trial_status(email, fid)
+    return bool(status["resume_unlocked"] or status["remaining"] > 0)
+
+
+def record_free_trial(email: str, fid: str):
+    cursor.execute(
+        """
+        INSERT OR IGNORE INTO free_downloads (id, resume_id, email)
+        VALUES (?, ?, ?)
+        """,
+        (str(uuid.uuid4()), fid, normalize_email(email)),
+    )
+    conn.commit()
 
 
 def payment_required_response():
@@ -1662,6 +1718,7 @@ def payment_config():
         "amount_rupees": RESUME_PRICE_RUPEES,
         "currency": "INR",
         "owner_emails": sorted(OWNER_EMAILS),
+        "free_trial_resumes": FREE_TRIAL_RESUMES,
     }
 
 
@@ -1681,6 +1738,19 @@ async def create_payment_order(request: Request):
         return {
             "owner_exempt": True,
             "download_token": make_download_token(fid, email),
+            "amount_rupees": 0,
+            "currency": "INR",
+        }
+
+    if can_use_free_trial(email, fid):
+        record_free_trial(email, fid)
+        status = free_trial_status(email, fid)
+        return {
+            "owner_exempt": False,
+            "free_trial": True,
+            "download_token": make_download_token(fid, email),
+            "free_trials_remaining": status["remaining"],
+            "free_trial_limit": FREE_TRIAL_RESUMES,
             "amount_rupees": 0,
             "currency": "INR",
         }
@@ -1826,6 +1896,7 @@ async def optimize_resume(
     normalized_user_email = normalize_email(user_email)
     owner_exempt = is_owner_email(normalized_user_email)
     download_token = make_download_token(fid, normalized_user_email) if owner_exempt else ""
+    trial_status = free_trial_status(normalized_user_email, fid)
 
     return {
         "id": fid,
@@ -1846,6 +1917,10 @@ async def optimize_resume(
         "currency": "INR",
         "owner_exempt": owner_exempt,
         "download_token": download_token,
+        "free_trial_limit": FREE_TRIAL_RESUMES,
+        "free_trials_used": trial_status["used"],
+        "free_trials_remaining": trial_status["remaining"],
+        "free_trial_available": bool(not owner_exempt and can_use_free_trial(normalized_user_email, fid)),
     }
 
 
