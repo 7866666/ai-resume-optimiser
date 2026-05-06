@@ -11,3 +11,13 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-3-flash-preview
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: DOWNLOAD_TOKEN_SECRET
+        sync: false
+      - key: OWNER_EMAILS
+        value: sumitmishra7886@gmail.com
+      - key: RESUME_PRICE_RUPEES
+        value: "49"
