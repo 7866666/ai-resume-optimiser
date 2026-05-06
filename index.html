@@ -886,6 +886,402 @@ textarea {
     border-bottom: 1px solid var(--line);
   }
 }
+
+/* Builder-style visual refresh. Keeps the existing form, API calls, and payment flow unchanged. */
+:root {
+  --ink: #172033;
+  --muted: #667085;
+  --page: #eef3f8;
+  --panel: #ffffff;
+  --line: #d7dee8;
+  --navy: #0b2f58;
+  --navy-2: #164875;
+  --teal: #0f8aa3;
+  --teal-2: #08748c;
+  --cyan-soft: #e8f7fb;
+  --gold: #f0a12a;
+  --green: #14845f;
+  --red: #b42318;
+  --shadow: 0 18px 44px rgba(23, 32, 51, 0.12);
+}
+
+body {
+  background:
+    linear-gradient(180deg, #f8fbff 0%, #eef3f8 42%, #e9eff6 100%);
+}
+
+.app-shell {
+  background:
+    linear-gradient(90deg, rgba(15, 138, 163, 0.08), transparent 34%),
+    linear-gradient(270deg, rgba(240, 161, 42, 0.10), transparent 30%);
+}
+
+.topbar {
+  height: 68px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--ink);
+  border-bottom: 1px solid rgba(215, 222, 232, 0.90);
+  box-shadow: 0 8px 24px rgba(23, 32, 51, 0.08);
+}
+
+.brand img {
+  width: 38px;
+  height: 38px;
+  filter: drop-shadow(0 7px 12px rgba(15, 138, 163, 0.18));
+}
+
+.brand-title {
+  color: var(--navy);
+}
+
+.brand-subtitle,
+.top-status {
+  color: var(--muted);
+}
+
+.pill {
+  background: #f3f7fb;
+  border-color: #dbe4ee;
+  color: #334155;
+}
+
+.install-button {
+  background: var(--navy);
+  color: white;
+  border-radius: 7px;
+}
+
+.builder-rail {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 18px 24px 0;
+}
+
+.builder-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 30px rgba(23, 32, 51, 0.08);
+  overflow: hidden;
+}
+
+.builder-step {
+  position: relative;
+  min-height: 64px;
+  padding: 13px 16px 13px 52px;
+  border-right: 1px solid var(--line);
+}
+
+.builder-step:last-child {
+  border-right: 0;
+}
+
+.builder-step::before {
+  content: attr(data-step);
+  position: absolute;
+  left: 16px;
+  top: 15px;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #dceaf5;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.builder-step.active::before {
+  background: var(--teal);
+  color: white;
+}
+
+.builder-step strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.builder-step span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.hero {
+  padding-top: 18px;
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.hero-card,
+.guide-card,
+.panel,
+.change-list,
+.download-box,
+.preview-card,
+.step,
+.install-panel,
+.install-card {
+  border-radius: 8px;
+}
+
+.hero-card {
+  min-height: 224px;
+  padding: 28px 32px;
+  background:
+    linear-gradient(135deg, rgba(11, 47, 88, 0.96), rgba(13, 86, 118, 0.96)),
+    var(--navy);
+}
+
+.hero-card::before {
+  inset: auto 24px 18px auto;
+  width: 190px;
+  height: 145px;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, #ffffff 0 30%, #eef5fb 30% 100%);
+  filter: none;
+  opacity: 0.16;
+  box-shadow: -18px -18px 0 rgba(255,255,255,0.06);
+}
+
+.hero-card::after {
+  background:
+    linear-gradient(90deg, transparent 0 45%, rgba(255,255,255,0.08) 45% 46%, transparent 46%),
+    repeating-linear-gradient(0deg, transparent 0 16px, rgba(255,255,255,0.08) 16px 17px);
+  opacity: 0.32;
+}
+
+.eyebrow {
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.hero h1 {
+  max-width: 760px;
+  font-size: 42px;
+}
+
+.hero-stats {
+  gap: 10px;
+}
+
+.hero-stat {
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.guide-card {
+  background: white;
+}
+
+.guide-card h2 {
+  color: var(--navy);
+}
+
+.guide-num,
+.step-icon {
+  border-radius: 7px;
+  background: #eef6ff;
+  color: var(--navy);
+}
+
+.workspace {
+  grid-template-columns: minmax(350px, 430px) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.panel {
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 16px 38px rgba(23, 32, 51, 0.09);
+}
+
+.intake {
+  position: sticky;
+  top: 88px;
+}
+
+.section-kicker {
+  color: var(--teal-2);
+}
+
+.steps {
+  grid-template-columns: 1fr;
+  margin: 16px 0 18px;
+}
+
+.step {
+  background: #f8fbff;
+}
+
+input,
+textarea {
+  border-radius: 7px;
+  background: #fbfdff;
+}
+
+textarea {
+  min-height: 235px;
+}
+
+.primary,
+.secondary,
+.download-box a,
+.download-box button {
+  border-radius: 7px;
+}
+
+.primary,
+.download-box button,
+.download-box a.primary-link {
+  background: #ffb02e;
+  border-color: #ffb02e;
+  color: #172033;
+  box-shadow: 0 12px 22px rgba(240, 161, 42, 0.22);
+}
+
+.primary:hover,
+.download-box button:hover {
+  background: #f2a01f;
+}
+
+.results {
+  min-height: 720px;
+}
+
+.results-head {
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+}
+
+.score-strip {
+  background: #f7fafc;
+}
+
+.metric {
+  padding: 16px 18px;
+  background: transparent;
+}
+
+.metric strong {
+  color: var(--navy);
+}
+
+.result-body {
+  grid-template-columns: minmax(0, 1fr) 275px;
+  background: #f5f8fc;
+}
+
+.change-list,
+.download-box,
+.preview-card {
+  background: white;
+  box-shadow: 0 10px 22px rgba(23, 32, 51, 0.06);
+}
+
+.change-list {
+  min-height: 240px;
+}
+
+.preview-card {
+  background: linear-gradient(180deg, #f9fbfd, #eef4f9);
+}
+
+.mini-resume-wrap {
+  grid-template-columns: 330px minmax(0, 1fr);
+  gap: 24px;
+}
+
+.mini-resume {
+  min-height: 430px;
+  max-width: 330px;
+  grid-template-columns: 34% 66%;
+  border: 0;
+  box-shadow:
+    0 22px 48px rgba(23, 32, 51, 0.18),
+    0 0 0 1px rgba(23, 32, 51, 0.08);
+}
+
+.mini-resume::after {
+  opacity: 0.55;
+}
+
+.mini-left {
+  background: #173b63;
+}
+
+.mini-right {
+  background: white;
+}
+
+.preview-notes {
+  max-width: 360px;
+  padding: 16px;
+  border-left: 3px solid var(--teal);
+  background: rgba(255, 255, 255, 0.70);
+  border-radius: 0 8px 8px 0;
+}
+
+.download-box {
+  top: 88px;
+}
+
+.download-price {
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: #fff6e3;
+  color: #8a5600;
+}
+
+@media (max-width: 1080px) {
+  .intake {
+    position: static;
+  }
+
+  .builder-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .builder-step:nth-child(2) {
+    border-right: 0;
+  }
+
+  .builder-step:nth-child(-n+2) {
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 760px) {
+  .builder-rail {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .builder-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .builder-step,
+  .builder-step:nth-child(-n+2) {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .builder-step:last-child {
+    border-bottom: 0;
+  }
+
+  .hero h1 {
+    font-size: 32px;
+  }
+
+  .mini-resume-wrap {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
 </head>
 <body>
@@ -906,22 +1302,31 @@ textarea {
     </div>
   </header>
 
+  <section class="builder-rail" aria-label="Resume builder progress">
+    <div class="builder-steps">
+      <div class="builder-step active" data-step="1"><strong>Upload</strong><span>Add your DOCX resume</span></div>
+      <div class="builder-step active" data-step="2"><strong>Target</strong><span>Paste the job description</span></div>
+      <div class="builder-step" data-step="3"><strong>Improve</strong><span>Review ATS guidance</span></div>
+      <div class="builder-step" data-step="4"><strong>Download</strong><span>Unlock DOCX and PDF</span></div>
+    </div>
+  </section>
+
   <section class="hero">
     <div class="hero-card">
       <div class="hero-content">
-        <div class="eyebrow">Resume intelligence for targeted applications</div>
-        <h1>Optimize each resume for the job you actually want.</h1>
-        <p>Upload your DOCX resume, paste the job description, and generate an ATS-focused Word document with score insights, missing keywords, and recruiter-ready formatting.</p>
+        <div class="eyebrow">AI resume builder workspace</div>
+        <h1>Build a sharper resume for every job application.</h1>
+        <p>Upload your DOCX, paste the target job description, and get ATS scoring, tailored improvement notes, a recruiter-ready preview, and paid download unlocks.</p>
         <div class="hero-stats">
+          <div class="hero-stat"><strong>32+</strong><span>resume-ready layouts</span></div>
           <div class="hero-stat"><strong>90%+</strong><span>target ATS alignment</span></div>
-          <div class="hero-stat"><strong>DOCX</strong><span>professional output</span></div>
-          <div class="hero-stat"><strong>PWA</strong><span>installable on devices</span></div>
+          <div class="hero-stat"><strong>Rs 49</strong><span>per unlocked resume</span></div>
         </div>
       </div>
     </div>
 
     <aside class="guide-card">
-      <h2>Guided workflow</h2>
+      <h2>Guided builder</h2>
       <div class="guide-step">
         <div class="guide-num">1</div>
         <div><strong>Upload resume</strong><span>Start with your existing DOCX file.</span></div>
@@ -940,8 +1345,8 @@ textarea {
   <main class="workspace">
     <section class="panel intake">
       <div class="section-kicker">Optimizer input</div>
-      <h2>Build your targeted resume</h2>
-      <p class="intake-copy">Keep the fields below the same as your current workflow. The design is new; the model behavior stays unchanged.</p>
+      <h2>Create your targeted resume</h2>
+      <p class="intake-copy">The working flow is unchanged: add your resume, paste the JD, and generate the optimized version.</p>
 
       <div class="steps">
         <div class="step">
