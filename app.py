@@ -104,6 +104,8 @@ INDEX_PATH = os.path.join(BASE_DIR, "index.html")
 MANIFEST_PATH = os.path.join(BASE_DIR, "manifest.json")
 SERVICE_WORKER_PATH = os.path.join(BASE_DIR, "service-worker.js")
 APP_ICON_PATH = os.path.join(BASE_DIR, "app-icon.svg")
+APP_LOGO_PATH = os.path.join(BASE_DIR, "app-logo.png")
+APP_LOGO_ICON_PATH = os.path.join(BASE_DIR, "app-logo-icon.png")
 APK_PATH = os.path.join(BASE_DIR, "ResumeFit-Pro.apk")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -1699,6 +1701,16 @@ def service_worker():
 @app.get("/app-icon.svg")
 def app_icon():
     return FileResponse(APP_ICON_PATH, media_type="image/svg+xml")
+
+
+@app.get("/app-logo.png")
+def app_logo():
+    return FileResponse(APP_LOGO_PATH, media_type="image/png")
+
+
+@app.get("/app-logo-icon.png")
+def app_logo_icon():
+    return FileResponse(APP_LOGO_ICON_PATH, media_type="image/png")
 
 
 @app.get("/ResumeFit-Pro.apk")
