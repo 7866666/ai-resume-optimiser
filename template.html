@@ -19,6 +19,40 @@ body {
   color: #111827;
 }
 
+body.template-modern .left {
+  background: #0f766e;
+}
+
+body.template-fresher .left {
+  background: #1d4ed8;
+}
+
+body.template-corporate .left {
+  background: #374151;
+}
+
+body.template-creative .left {
+  background: #7c3aed;
+}
+
+body.template-minimal .page {
+  display: block;
+  padding: 24px 30px;
+}
+
+body.template-minimal .left,
+body.template-minimal .right {
+  width: 100%;
+  background: white;
+  color: #111827;
+  padding: 0;
+}
+
+body.template-minimal .contact a,
+body.template-minimal li.skill-subheading {
+  color: #111827;
+}
+
 .page {
   width: 210mm;
   min-height: 297mm;
@@ -135,7 +169,7 @@ p {
 
 </head>
 
-<body>
+<body class="{{template_class}}">
 
 <div class="page">
 

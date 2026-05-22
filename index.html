@@ -1250,6 +1250,162 @@ textarea {
   color: #8a5600;
 }
 
+.restore-banner {
+  display: none;
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid #b9e4ec;
+  border-radius: 8px;
+  background: #ecfbfd;
+  color: #17324d;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.restore-banner.visible {
+  display: flex;
+}
+
+.restore-actions,
+.preview-toolbar,
+.rewrite-actions,
+.version-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mini-button {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: white;
+  color: var(--ink);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.template-option {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px;
+  background: #fbfdff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.dash-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: white;
+}
+
+.dash-item span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.dash-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #e5edf5;
+  overflow: hidden;
+}
+
+.dash-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: #b42318;
+  transition: width 0.24s ease, background 0.24s ease;
+}
+
+.dash-bar i.ok {
+  background: #087f5b;
+}
+
+.dash-bar i.warn {
+  background: #bd7b16;
+}
+
+.rewrite-card,
+.version-card {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: white;
+}
+
+.rewrite-card h3,
+.version-card h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.rewrite-card textarea {
+  min-height: 82px;
+}
+
+.rewrite-output {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 7px;
+  background: #fbfdff;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  min-height: 42px;
+}
+
+.version-row input,
+.version-row select {
+  flex: 1 1 160px;
+}
+
+.live-frame {
+  width: 100%;
+  height: 520px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  transform-origin: top center;
+}
+
+.live-frame.mobile {
+  max-width: 390px;
+  margin: 0 auto;
+}
+
+.preview-toolbar {
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
 @media (max-width: 1080px) {
   .intake {
     position: static;
@@ -1293,6 +1449,11 @@ textarea {
   }
 
   .mini-resume-wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .template-grid,
+  .dashboard-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1357,6 +1518,13 @@ textarea {
       <div class="section-kicker">Optimizer input</div>
       <h2>Create your targeted resume</h2>
       <p class="intake-copy">The working flow is unchanged: add your resume, paste the JD, and generate the optimized version.</p>
+      <div id="restore-banner" class="restore-banner">
+        <span>A saved draft is available from your last session.</span>
+        <div class="restore-actions">
+          <button class="mini-button" type="button" id="restore-draft">Restore</button>
+          <button class="mini-button" type="button" id="discard-draft">Discard</button>
+        </div>
+      </div>
 
       <div class="steps">
         <div class="step">
@@ -1386,12 +1554,48 @@ textarea {
           <label for="jd">Job description <span>target role</span></label>
           <textarea id="jd" name="jd" required placeholder="Paste the full job description here"></textarea>
         </div>
+        <div>
+          <label>Template <span>choose a resume style</span></label>
+          <div class="template-grid">
+            <label class="template-option"><input type="radio" name="template_style" value="minimal" checked> Minimal ATS</label>
+            <label class="template-option"><input type="radio" name="template_style" value="modern"> Modern Tech</label>
+            <label class="template-option"><input type="radio" name="template_style" value="fresher"> Fresher</label>
+            <label class="template-option"><input type="radio" name="template_style" value="corporate"> Corporate</label>
+            <label class="template-option"><input type="radio" name="template_style" value="creative"> Creative</label>
+          </div>
+        </div>
         <div class="button-row">
           <button class="primary" type="submit">Analyze and optimize</button>
           <button class="secondary" type="reset">Clear</button>
         </div>
       </form>
       <div id="status"></div>
+
+      <div class="version-card">
+        <h3>Resume Versions</h3>
+        <div class="version-row">
+          <input id="version-name" type="text" placeholder="Google Resume">
+          <button class="mini-button" type="button" id="save-version">Save version</button>
+        </div>
+        <div class="version-row" style="margin-top: 8px;">
+          <select id="version-list" aria-label="Saved resume versions"></select>
+          <button class="mini-button" type="button" id="load-version">Load</button>
+          <button class="mini-button" type="button" id="duplicate-version">Duplicate</button>
+        </div>
+      </div>
+
+      <div class="rewrite-card">
+        <h3>AI Bullet Point Rewriter</h3>
+        <textarea id="bullet-input" placeholder="Worked on website"></textarea>
+        <div class="rewrite-actions">
+          <button class="mini-button" type="button" data-rewrite="improve">Improve</button>
+          <button class="mini-button" type="button" data-rewrite="shorten">Shorten</button>
+          <button class="mini-button" type="button" data-rewrite="professionalize">Professionalize</button>
+          <button class="mini-button" type="button" data-rewrite="quantify">Quantify</button>
+          <button class="mini-button" type="button" data-rewrite="ats">ATS optimize</button>
+        </div>
+        <div id="rewrite-output" class="rewrite-output">Rewritten bullets appear here.</div>
+      </div>
 
       <div class="install-panel">
         <h3>Install on any device</h3>
@@ -1447,6 +1651,12 @@ textarea {
 
       <div class="result-body">
         <div>
+          <div class="dashboard-grid" id="score-dashboard">
+            <div class="dash-item"><span>Keyword optimization <strong id="dash-keyword">--</strong></span><div class="dash-bar"><i id="bar-keyword"></i></div></div>
+            <div class="dash-item"><span>Role alignment <strong id="dash-role">--</strong></span><div class="dash-bar"><i id="bar-role"></i></div></div>
+            <div class="dash-item"><span>Skill gaps <strong id="dash-skills">--</strong></span><div class="dash-bar"><i id="bar-skills"></i></div></div>
+            <div class="dash-item"><span>Formatting safety <strong id="dash-format">--</strong></span><div class="dash-bar"><i id="bar-format"></i></div></div>
+          </div>
           <div class="change-list">
             <h3>Recommended Changes</h3>
             <div id="changes" class="placeholder">No analysis yet.</div>
@@ -1454,41 +1664,17 @@ textarea {
 
           <div class="preview-card">
             <h3>Resume Preview</h3>
-            <div class="mini-resume-wrap">
-              <div class="mini-resume" aria-hidden="true">
-                <div class="mini-left">
-                  <strong>PROFILE</strong>
-                  <div class="mini-line long"></div>
-                  <div class="mini-line medium"></div>
-                  <div class="mini-line short"></div>
-                  <br>
-                  <strong>SKILLS</strong>
-                  <div class="mini-line long"></div>
-                  <div class="mini-line medium"></div>
-                  <div class="mini-line long"></div>
-                  <div class="mini-line short"></div>
-                </div>
-                <div class="mini-right">
-                  <strong>SUMMARY</strong>
-                  <div class="mini-line long"></div>
-                  <div class="mini-line long"></div>
-                  <div class="mini-line medium"></div>
-                  <br>
-                  <strong>EXPERIENCE</strong>
-                  <div class="mini-line long"></div>
-                  <div class="mini-line medium"></div>
-                  <div class="mini-line long"></div>
-                  <br>
-                  <strong>PROJECTS</strong>
-                  <div class="mini-line medium"></div>
-                  <div class="mini-line short"></div>
-                </div>
+            <div class="preview-toolbar">
+              <div>
+                <button class="mini-button" type="button" id="desktop-preview">Desktop</button>
+                <button class="mini-button" type="button" id="mobile-preview">Mobile</button>
               </div>
-              <div class="preview-notes">
-                <strong>What happens after analysis?</strong>
-                You get a targeted resume preview, ATS improvement notes, and a professionally formatted Word document that can be edited before applying.
+              <div>
+                <button class="mini-button" type="button" id="zoom-out">-</button>
+                <button class="mini-button" type="button" id="zoom-in">+</button>
               </div>
             </div>
+            <iframe id="live-preview" class="live-frame" title="Live resume preview"></iframe>
           </div>
         </div>
 
@@ -1511,8 +1697,15 @@ const resultState = document.getElementById("result-state");
 const changesBox = document.getElementById("changes");
 const downloadsBox = document.getElementById("downloads");
 const resultSubtitle = document.getElementById("result-subtitle");
+const restoreBanner = document.getElementById("restore-banner");
+const livePreview = document.getElementById("live-preview");
+const rewriteOutput = document.getElementById("rewrite-output");
+const versionList = document.getElementById("version-list");
+const draftKey = "resumefit-pro-draft";
+const versionsKey = "resumefit-pro-versions";
 let activeResume = null;
 let activeDownloadToken = "";
+let previewZoom = 1;
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/service-worker.js").catch(() => {});
@@ -1530,6 +1723,113 @@ function escapeHtml(value) {
 function withToken(url, token) {
   const separator = url.includes("?") ? "&" : "?";
   return `${url}${separator}token=${encodeURIComponent(token)}`;
+}
+
+function selectedTemplate() {
+  return new FormData(form).get("template_style") || "minimal";
+}
+
+function currentDraft() {
+  return {
+    email: document.getElementById("user_email").value,
+    jd: document.getElementById("jd").value,
+    template: selectedTemplate(),
+    bullet: document.getElementById("bullet-input").value,
+    savedAt: new Date().toISOString(),
+  };
+}
+
+function applyDraft(draft) {
+  if (!draft) return;
+  document.getElementById("user_email").value = draft.email || "";
+  document.getElementById("jd").value = draft.jd || "";
+  document.getElementById("bullet-input").value = draft.bullet || "";
+  const templateInput = form.querySelector(`[name="template_style"][value="${draft.template || "minimal"}"]`);
+  if (templateInput) templateInput.checked = true;
+  renderLivePreview();
+}
+
+function saveDraft() {
+  localStorage.setItem(draftKey, JSON.stringify(currentDraft()));
+}
+
+function updateRestoreBanner() {
+  const stored = localStorage.getItem(draftKey);
+  restoreBanner.classList.toggle("visible", Boolean(stored));
+}
+
+function previewAccent() {
+  return {
+    minimal: "#111827",
+    modern: "#0f766e",
+    fresher: "#1d4ed8",
+    corporate: "#374151",
+    creative: "#7c3aed",
+  }[selectedTemplate()] || "#111827";
+}
+
+function renderLivePreview() {
+  const jd = document.getElementById("jd").value.trim();
+  const email = document.getElementById("user_email").value.trim();
+  const role = jd.match(/\b(engineer|developer|analyst|administrator|manager|designer|specialist)\b/i)?.[0] || "Target Role";
+  const accent = previewAccent();
+  const keywords = jd.split(/\W+/).filter((word) => word.length > 4).slice(0, 10);
+  livePreview.srcdoc = `<!doctype html><html><head><style>
+    body{margin:0;font-family:Arial,sans-serif;color:#111827;background:white}
+    .page{width:210mm;min-height:297mm;margin:auto;display:grid;grid-template-columns:32% 68%;box-shadow:inset 0 -1px #d9e2ec}
+    aside{background:${accent};color:white;padding:25px}main{padding:30px}
+    h1{font-size:24px;margin:0 0 6px}.role{font-size:13px;color:#dbeafe;margin-bottom:14px}
+    h2{font-size:13px;text-transform:uppercase;border-bottom:2px solid #111827;padding-bottom:4px;margin:20px 0 8px}
+    aside h2{border-color:rgba(255,255,255,.55)}p,li{font-size:13px;line-height:1.55}.muted{color:#64748b}
+    .break{height:1px;background:repeating-linear-gradient(90deg,#cbd5e1 0 8px,transparent 8px 14px);margin:16px 0}
+  </style></head><body><div class="page"><aside>
+    <h1>Your Name</h1><div class="role">${escapeHtml(role)}</div><p>${escapeHtml(email || "you@example.com")}</p>
+    <h2>Skills</h2><ul>${(keywords.length ? keywords : ["Leadership","Projects","Communication"]).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+  </aside><main>
+    <h2>Summary</h2><p>Targeted resume preview updates as you edit the job description and template. Run analysis for the optimized recruiter-ready version.</p>
+    <div class="break"></div><h2>Experience</h2><ul><li>Achievement-focused bullet aligned to the selected job description.</li><li>ATS-safe layout with clear sections and page break visualization.</li></ul>
+    <h2>Projects</h2><p class="muted">Optimized project content appears after analysis.</p>
+  </main></div></body></html>`;
+}
+
+function applyPreviewZoom() {
+  livePreview.style.transform = `scale(${previewZoom})`;
+  livePreview.style.height = `${Math.round(520 / previewZoom)}px`;
+}
+
+function setDashboardValue(key, value) {
+  const number = Number(value || 0);
+  document.getElementById(`dash-${key}`).textContent = `${number}%`;
+  const bar = document.getElementById(`bar-${key}`);
+  bar.style.width = `${number}%`;
+  bar.className = number >= 80 ? "ok" : number >= 60 ? "warn" : "";
+}
+
+function renderDashboard(breakdown = {}) {
+  setDashboardValue("keyword", breakdown.keyword_match);
+  setDashboardValue("role", breakdown.role_alignment);
+  setDashboardValue("skills", breakdown.skills_match);
+  setDashboardValue("format", breakdown.formatting_ats_readability);
+}
+
+function loadVersions() {
+  try {
+    return JSON.parse(localStorage.getItem(versionsKey) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveVersions(versions) {
+  localStorage.setItem(versionsKey, JSON.stringify(versions));
+  renderVersionList();
+}
+
+function renderVersionList() {
+  const versions = loadVersions();
+  versionList.innerHTML = versions.length
+    ? versions.map((version, index) => `<option value="${index}">${escapeHtml(version.name)}</option>`).join("")
+    : `<option value="">No saved versions yet</option>`;
 }
 
 function loadRazorpayCheckout() {
@@ -1671,9 +1971,94 @@ function renderPaymentPrompt(data) {
   });
 }
 
+restoreBanner.querySelector("#restore-draft").addEventListener("click", () => {
+  applyDraft(JSON.parse(localStorage.getItem(draftKey) || "{}"));
+  restoreBanner.classList.remove("visible");
+  statusBox.textContent = "Draft restored.";
+});
+
+restoreBanner.querySelector("#discard-draft").addEventListener("click", () => {
+  localStorage.removeItem(draftKey);
+  updateRestoreBanner();
+});
+
+form.addEventListener("input", () => {
+  saveDraft();
+  renderLivePreview();
+});
+
+form.addEventListener("change", () => {
+  saveDraft();
+  renderLivePreview();
+});
+
+document.getElementById("zoom-in").addEventListener("click", () => {
+  previewZoom = Math.min(1.25, previewZoom + 0.1);
+  applyPreviewZoom();
+});
+
+document.getElementById("zoom-out").addEventListener("click", () => {
+  previewZoom = Math.max(0.75, previewZoom - 0.1);
+  applyPreviewZoom();
+});
+
+document.getElementById("desktop-preview").addEventListener("click", () => {
+  livePreview.classList.remove("mobile");
+});
+
+document.getElementById("mobile-preview").addEventListener("click", () => {
+  livePreview.classList.add("mobile");
+});
+
+document.querySelectorAll("[data-rewrite]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const bullet = document.getElementById("bullet-input").value.trim();
+    rewriteOutput.textContent = "Rewriting...";
+    try {
+      const response = await fetch("/rewrite-bullet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bullet,
+          mode: button.dataset.rewrite,
+          jd: document.getElementById("jd").value,
+        }),
+      });
+      const data = await response.json();
+      rewriteOutput.textContent = response.ok ? data.rewritten : data.error || "Could not rewrite this bullet.";
+    } catch {
+      rewriteOutput.textContent = "Could not reach the rewriter. Please retry.";
+    }
+  });
+});
+
+document.getElementById("save-version").addEventListener("click", () => {
+  const name = document.getElementById("version-name").value.trim() || `Resume version ${loadVersions().length + 1}`;
+  saveVersions([...loadVersions(), { name, draft: currentDraft() }]);
+  statusBox.textContent = "Version saved.";
+});
+
+document.getElementById("load-version").addEventListener("click", () => {
+  const version = loadVersions()[Number(versionList.value)];
+  if (version) {
+    applyDraft(version.draft);
+    statusBox.textContent = `${version.name} loaded.`;
+  }
+});
+
+document.getElementById("duplicate-version").addEventListener("click", () => {
+  const versions = loadVersions();
+  const version = versions[Number(versionList.value)];
+  if (version) {
+    saveVersions([...versions, { name: `${version.name} copy`, draft: version.draft }]);
+    statusBox.textContent = "Version duplicated.";
+  }
+});
+
 form.addEventListener("reset", () => {
   activeResume = null;
   activeDownloadToken = "";
+  localStorage.removeItem(draftKey);
   statusBox.className = "";
   statusBox.textContent = "";
   currentScore.textContent = "--";
@@ -1685,6 +2070,11 @@ form.addEventListener("reset", () => {
   changesBox.textContent = "No analysis yet.";
   downloadsBox.className = "placeholder";
   downloadsBox.textContent = "Downloads appear after optimization.";
+  renderDashboard();
+  setTimeout(() => {
+    renderLivePreview();
+    updateRestoreBanner();
+  }, 0);
 });
 
 form.addEventListener("submit", async (event) => {
@@ -1725,6 +2115,9 @@ form.addEventListener("submit", async (event) => {
   resultState.textContent = "Complete";
   resultSubtitle.textContent = "Review recommendations, preview the resume, or download the Word document.";
   statusBox.textContent = "Optimization complete.";
+  renderDashboard(data.score_breakdown || {});
+  livePreview.srcdoc = "";
+  livePreview.src = data.preview_url;
 
   changesBox.className = "";
   changesBox.innerHTML = changes.length
@@ -1734,6 +2127,11 @@ form.addEventListener("submit", async (event) => {
   downloadsBox.className = "";
   renderPaymentPrompt(data);
 });
+
+renderVersionList();
+updateRestoreBanner();
+renderLivePreview();
+applyPreviewZoom();
 </script>
 </body>
 </html>

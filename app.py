@@ -1493,11 +1493,87 @@ def percent_bar(label: str, score: int) -> str:
 
 # ================= HTML =================
 
-def build_html(data: dict) -> str:
+TEMPLATE_CLASSES = {
+    "minimal": "template-minimal",
+    "modern": "template-modern",
+    "fresher": "template-fresher",
+    "corporate": "template-corporate",
+    "creative": "template-creative",
+}
+
+
+def template_class(style: str | None) -> str:
+    return TEMPLATE_CLASSES.get(str(style or "").strip().lower(), "")
+
+
+def fallback_rewrite_bullet(bullet: str, mode: str, jd: str = "") -> str:
+    text = " ".join(str(bullet or "").split())
+    if not text:
+        return ""
+
+    cleaned = re.sub(
+        r"^(worked on|handled|responsible for|helped with|did|made)\s+",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    ).strip() or text
+    action_map = {
+        "shorten": "Delivered",
+        "professionalize": "Executed",
+        "quantify": "Improved",
+        "ats": "Optimized",
+    }
+    action = action_map.get(mode, "Developed")
+    jd_terms = important_terms(jd)[:3] if jd else []
+    keyword_tail = f" using {', '.join(jd_terms)}" if jd_terms else ""
+    return f"{action} {cleaned[0].lower() + cleaned[1:]}{keyword_tail}, improving clarity, impact, and recruiter relevance."
+
+
+def rewrite_bullet(bullet: str, mode: str, jd: str = "", api_key: str | None = None) -> str:
+    mode = str(mode or "improve").strip().lower()
+    api_key = get_gemini_api_key(api_key)
+    if not api_key:
+        return fallback_rewrite_bullet(bullet, mode, jd)
+
+    prompt = f"""
+Return only one resume bullet, no quotes and no markdown.
+Mode: {mode}
+Rules:
+- Keep it truthful.
+- Do not invent employers, tools, dates, or exact metrics.
+- If metrics are missing, improve impact without fake numbers.
+- Make it concise, professional, and ATS-readable.
+
+Job description context:
+{jd[:2500]}
+
+Original bullet:
+{bullet[:800]}
+"""
+
+    def call_gemini():
+        import google.generativeai as genai
+
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(GEMINI_MODEL)
+        return model.generate_content(prompt).text.strip()
+
+    future = AI_EXECUTOR.submit(call_gemini)
+    try:
+        rewritten = future.result(timeout=18)
+    except Exception:
+        return fallback_rewrite_bullet(bullet, mode, jd)
+
+    rewritten = re.sub(r"^\s*[-•]\s*", "", rewritten).strip()
+    return rewritten or fallback_rewrite_bullet(bullet, mode, jd)
+
+
+def build_html(data: dict, style: str | None = None) -> str:
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as template_file:
         template = template_file.read()
 
     replacements = {
+        "{{template_class}}": template_class(style),
         "{{header_block}}": data["header"],
         "{{summary}}": text_html(data.get("summary")),
         "{{skills}}": list_html(data.get("skills")),
@@ -1863,6 +1939,7 @@ async def optimize_resume(
     jd: str = Form(...),
     api_key: str | None = Form(None),
     user_email: str | None = Form(None),
+    template_style: str | None = Form(None),
 ):
     api_key = get_gemini_api_key(api_key)
     if not api_key:
@@ -1891,7 +1968,7 @@ async def optimize_resume(
         **analysis["optimized_resume"],
     }
 
-    rendered_html = build_html(data)
+    rendered_html = build_html(data, template_style)
     fid = str(uuid.uuid4())[:8]
 
     html_path = os.path.join(OUTPUT_DIR, f"{fid}.html")
@@ -1934,6 +2011,20 @@ async def optimize_resume(
         "free_trials_remaining": trial_status["remaining"],
         "free_trial_available": bool(not owner_exempt and can_use_free_trial(normalized_user_email, fid)),
     }
+
+
+@app.post("/rewrite-bullet")
+async def rewrite_resume_bullet(request: Request):
+    payload = await request.json()
+    bullet = str(payload.get("bullet", "")).strip()
+    mode = str(payload.get("mode", "improve")).strip()
+    jd = str(payload.get("jd", "")).strip()
+    api_key = payload.get("api_key")
+
+    if not bullet:
+        return JSONResponse(status_code=400, content={"error": "Add a bullet point to rewrite."})
+
+    return {"rewritten": rewrite_bullet(bullet, mode, jd, api_key)}
 
 
 @app.get("/analysis/{fid}", response_class=HTMLResponse)
