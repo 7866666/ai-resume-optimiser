@@ -1346,7 +1346,7 @@ textarea {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 16px;
 }
@@ -1464,6 +1464,40 @@ textarea {
   line-height: 1.45;
 }
 
+.ats-checklist {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.check-item strong {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fee2e2;
+  color: #b42318;
+  flex: 0 0 auto;
+}
+
+.check-item.passed strong {
+  background: #dcfce7;
+  color: #087f5b;
+}
+
 .version-row input,
 .version-row select {
   flex: 1 1 160px;
@@ -1569,9 +1603,9 @@ textarea {
   <section class="hero">
     <div class="hero-card">
       <div class="hero-content">
-        <div class="eyebrow">AI resume builder workspace</div>
-        <h1>Build a sharper resume for every job application.</h1>
-        <p>Upload your DOCX, paste the target job description, and get ATS scoring, tailored improvement notes, a recruiter-ready preview, and paid download unlocks.</p>
+        <div class="eyebrow">AI resume tailoring workspace</div>
+        <h1>Tailor your resume to every job description.</h1>
+        <p>Upload your resume, paste the target role, and get a rewritten job-specific resume with ATS score, missing keywords, recruiter-safe formatting, live preview, and DOCX/PDF exports.</p>
         <div class="hero-stats">
           <div class="hero-stat"><strong>32+</strong><span>resume-ready layouts</span></div>
           <div class="hero-stat"><strong>90%+</strong><span>target ATS alignment</span></div>
@@ -1610,7 +1644,7 @@ textarea {
     <section class="panel intake">
       <div class="section-kicker">Optimizer input</div>
       <h2>Create your targeted resume</h2>
-      <p class="intake-copy">The working flow is unchanged: add your resume, paste the JD, and generate the optimized version.</p>
+      <p class="intake-copy">Add your resume and a job description, then let ResumeFit Pro tailor the content for that exact application.</p>
       <div id="restore-banner" class="restore-banner">
         <span>A saved draft is available from your last session.</span>
         <div class="restore-actions">
@@ -1725,6 +1759,13 @@ textarea {
         <div id="github-output" class="import-output">Imported GitHub skills and projects appear here.</div>
       </div>
 
+      <div class="import-card">
+        <h3>LinkedIn Text Import</h3>
+        <textarea id="linkedin-text" placeholder="Paste your LinkedIn About, Experience, Skills, or exported profile text"></textarea>
+        <button class="mini-button" type="button" id="import-linkedin">Extract profile highlights</button>
+        <div id="linkedin-output" class="import-output">LinkedIn highlights appear here.</div>
+      </div>
+
       <div class="install-panel">
         <h3>Install on any device</h3>
         <div class="install-grid">
@@ -1784,7 +1825,12 @@ textarea {
             <div class="dash-item"><span>Role alignment <strong id="dash-role">--</strong></span><div class="dash-bar"><i id="bar-role"></i></div></div>
             <div class="dash-item"><span>Skill gaps <strong id="dash-skills">--</strong></span><div class="dash-bar"><i id="bar-skills"></i></div></div>
             <div class="dash-item"><span>Formatting safety <strong id="dash-format">--</strong></span><div class="dash-bar"><i id="bar-format"></i></div></div>
+            <div class="dash-item"><span>Readability <strong id="dash-readability">--</strong></span><div class="dash-bar"><i id="bar-readability"></i></div></div>
+            <div class="dash-item"><span>Measurable impact <strong id="dash-impact">--</strong></span><div class="dash-bar"><i id="bar-impact"></i></div></div>
+            <div class="dash-item"><span>Action verbs <strong id="dash-verbs">--</strong></span><div class="dash-bar"><i id="bar-verbs"></i></div></div>
+            <div class="dash-item"><span>Section completeness <strong id="dash-sections">--</strong></span><div class="dash-bar"><i id="bar-sections"></i></div></div>
           </div>
+          <div id="ats-checklist" class="ats-checklist"></div>
           <div class="change-list">
             <h3>Recommended Changes</h3>
             <div id="changes" class="placeholder">No analysis yet.</div>
@@ -1872,6 +1918,7 @@ function currentDraft() {
     theme: document.getElementById("theme_style").value,
     bullet: document.getElementById("bullet-input").value,
     github: document.getElementById("github-username").value,
+    linkedin: document.getElementById("linkedin-text").value,
     savedAt: new Date().toISOString(),
   };
 }
@@ -1882,6 +1929,7 @@ function applyDraft(draft) {
   document.getElementById("jd").value = draft.jd || "";
   document.getElementById("bullet-input").value = draft.bullet || "";
   document.getElementById("github-username").value = draft.github || "";
+  document.getElementById("linkedin-text").value = draft.linkedin || "";
   const templateInput = form.querySelector(`[name="template_style"][value="${draft.template || "minimal"}"]`);
   if (templateInput) templateInput.checked = true;
   document.getElementById("font_style").value = draft.font || "arial";
@@ -1957,6 +2005,22 @@ function renderDashboard(breakdown = {}) {
   setDashboardValue("role", breakdown.role_alignment);
   setDashboardValue("skills", breakdown.skills_match);
   setDashboardValue("format", breakdown.formatting_ats_readability);
+}
+
+function renderQualityMetrics(metrics = {}) {
+  setDashboardValue("readability", metrics.readability);
+  setDashboardValue("impact", metrics.measurable_achievement_score);
+  setDashboardValue("verbs", metrics.weak_action_verb_score);
+  setDashboardValue("sections", metrics.section_completeness);
+  const checklist = metrics.checklist || [];
+  document.getElementById("ats-checklist").innerHTML = checklist.length
+    ? checklist.map((item) => `
+      <div class="check-item ${item.passed ? "passed" : ""}">
+        <strong>${item.passed ? "OK" : "!"}</strong>
+        <span>${escapeHtml(item.label)}</span>
+      </div>
+    `).join("")
+    : "";
 }
 
 function loadVersions() {
@@ -2287,6 +2351,21 @@ document.getElementById("import-github").addEventListener("click", async () => {
   }
 });
 
+document.getElementById("import-linkedin").addEventListener("click", () => {
+  const text = document.getElementById("linkedin-text").value.trim();
+  const output = document.getElementById("linkedin-output");
+  if (!text) {
+    output.textContent = "Paste LinkedIn profile text first.";
+    return;
+  }
+  const lines = text.split(/\n+/).map((line) => line.trim()).filter((line) => line.length > 24);
+  const skillWords = [...new Set((text.match(/\b[A-Z][A-Za-z+#.]{2,}\b/g) || []).slice(0, 12))];
+  const highlights = lines.slice(0, 4).join("\n");
+  output.textContent = `Highlights extracted:\n${highlights}\n\nPossible skills: ${skillWords.join(", ") || "Add a Skills section from LinkedIn."}`;
+  document.getElementById("bullet-input").value = lines[0] || document.getElementById("bullet-input").value;
+  saveDraft();
+});
+
 document.getElementById("save-version").addEventListener("click", () => {
   const name = document.getElementById("version-name").value.trim() || `Resume version ${loadVersions().length + 1}`;
   saveVersions([...loadVersions(), { name, draft: currentDraft() }]);
@@ -2329,7 +2408,10 @@ form.addEventListener("reset", () => {
   document.getElementById("section-bullets").textContent = "Run analysis to rewrite experience, project, and achievement bullets.";
   document.getElementById("cover-output").textContent = "Cover letter appears after generation.";
   document.getElementById("github-output").textContent = "Imported GitHub skills and projects appear here.";
+  document.getElementById("linkedin-output").textContent = "LinkedIn highlights appear here.";
+  document.getElementById("ats-checklist").innerHTML = "";
   renderDashboard();
+  renderQualityMetrics();
   setTimeout(() => {
     renderLivePreview();
     updateRestoreBanner();
@@ -2375,6 +2457,7 @@ form.addEventListener("submit", async (event) => {
   resultSubtitle.textContent = "Review recommendations, preview the resume, or download the Word document.";
   statusBox.textContent = "Optimization complete.";
   renderDashboard(data.score_breakdown || {});
+  renderQualityMetrics(data.quality_metrics || {});
   renderSectionBullets(data.optimized_resume || {});
   livePreview.srcdoc = "";
   livePreview.src = data.preview_url;

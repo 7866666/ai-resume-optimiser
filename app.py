@@ -792,6 +792,48 @@ def clamp_score(value, default: int = 0) -> int:
         return default
 
 
+WEAK_VERBS = {
+    "worked", "handled", "helped", "did", "made", "responsible", "assisted", "participated",
+    "involved", "managed tasks", "team player",
+}
+
+
+def quality_metrics(resume: str, analysis: dict) -> dict:
+    resume_lower = resume.lower()
+    weak_count = sum(len(re.findall(rf"\b{re.escape(verb)}\b", resume_lower)) for verb in WEAK_VERBS)
+    bullets = re.findall(r"(?:^|\n)\s*(?:[-•*]|\d+[.)])\s+(.+)", resume)
+    if not bullets:
+        bullets = [line for line in resume.splitlines() if len(line.strip()) > 28][:20]
+
+    measurable = sum(1 for bullet in bullets if re.search(r"\d+|%|reduced|increased|improved|saved|delivered", bullet, re.I))
+    measurable_score = round((measurable / max(len(bullets), 1)) * 100)
+    sentences = re.split(r"[.!?]+", resume)
+    words = re.findall(r"[A-Za-z]+", resume)
+    avg_sentence = len(words) / max(len([s for s in sentences if s.strip()]), 1)
+    readability = clamp_score(100 - max(0, round((avg_sentence - 18) * 3)), 82)
+    weak_verb_score = clamp_score(100 - weak_count * 12, 88)
+    section_names = ["summary", "skills", "experience", "projects", "education"]
+    completeness = round((sum(1 for section in section_names if section in resume_lower) / len(section_names)) * 100)
+    breakdown = analysis.get("score_breakdown") or {}
+
+    checklist = [
+        {"label": "Job description keywords are represented", "passed": clamp_score(breakdown.get("keyword_match")) >= 70},
+        {"label": "Resume uses ATS-safe formatting", "passed": clamp_score(breakdown.get("formatting_ats_readability")) >= 80},
+        {"label": "Weak action verbs are limited", "passed": weak_count <= 2},
+        {"label": "Achievements include measurable impact", "passed": measurable_score >= 45},
+        {"label": "Core resume sections are complete", "passed": completeness >= 80},
+    ]
+
+    return {
+        "readability": readability,
+        "weak_action_verbs": weak_count,
+        "weak_action_verb_score": weak_verb_score,
+        "measurable_achievement_score": clamp_score(measurable_score),
+        "section_completeness": clamp_score(completeness),
+        "checklist": checklist,
+    }
+
+
 def normalize_analysis(data: dict) -> dict:
     optimized = data.get("optimized_resume") or {}
     target_score = clamp_score(data.get("target_ats_score"), 90)
@@ -2070,6 +2112,7 @@ async def optimize_resume(
         analysis = fallback_analysis(jd, text)
 
     analysis = clean_optimized_resume(analysis, jd, text)
+    analysis["quality_metrics"] = quality_metrics(text, analysis)
     headline = analysis["optimized_resume"].get("headline") or infer_role(jd, text)
     header = extract_header(text, headline)
 
@@ -2107,6 +2150,7 @@ async def optimize_resume(
         "matched_keywords": analysis["matched_keywords"],
         "changes_to_make": analysis["changes_to_make"],
         "ats_notes": analysis["ats_notes"],
+        "quality_metrics": analysis["quality_metrics"],
         "optimized_resume": analysis["optimized_resume"],
         "analysis_url": f"/analysis/{fid}",
         "preview_url": f"/preview/{fid}",
