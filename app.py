@@ -8,6 +8,7 @@ import sqlite3
 import subprocess
 import tempfile
 import time
+import urllib.request
 import uuid
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from html.parser import HTMLParser
@@ -381,9 +382,19 @@ def require_download_access(fid: str, token: str | None):
     return payment_required_response()
 
 
-# ================= DOCX =================
+# ================= RESUME IMPORT =================
 
 def extract_text(file: UploadFile) -> str:
+    filename = (file.filename or "").lower()
+    if filename.endswith(".pdf"):
+        try:
+            from pypdf import PdfReader
+
+            reader = PdfReader(file.file)
+            return "\n".join((page.extract_text() or "").strip() for page in reader.pages if page.extract_text())
+        except Exception:
+            return ""
+
     doc = Document(file.file)
     return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
 
@@ -1499,11 +1510,45 @@ TEMPLATE_CLASSES = {
     "fresher": "template-fresher",
     "corporate": "template-corporate",
     "creative": "template-creative",
+    "software": "template-modern",
+    "product": "template-product",
+    "designer": "template-designer",
 }
 
 
 def template_class(style: str | None) -> str:
     return TEMPLATE_CLASSES.get(str(style or "").strip().lower(), "")
+
+
+FONT_MAP = {
+    "arial": "Arial, sans-serif",
+    "calibri": "Calibri, Arial, sans-serif",
+    "georgia": "Georgia, serif",
+}
+
+THEME_CLASSES = {
+    "light": "",
+    "dark": "theme-dark",
+}
+
+SPACING_CLASSES = {
+    "compact": "spacing-compact",
+    "balanced": "",
+    "relaxed": "spacing-relaxed",
+}
+
+
+def resume_body_classes(style: str | None, theme: str | None, spacing: str | None) -> str:
+    classes = [
+        template_class(style),
+        THEME_CLASSES.get(str(theme or "").strip().lower(), ""),
+        SPACING_CLASSES.get(str(spacing or "").strip().lower(), ""),
+    ]
+    return " ".join(class_name for class_name in classes if class_name)
+
+
+def resume_font(font: str | None) -> str:
+    return FONT_MAP.get(str(font or "").strip().lower(), FONT_MAP["arial"])
 
 
 def fallback_rewrite_bullet(bullet: str, mode: str, jd: str = "") -> str:
@@ -1568,12 +1613,70 @@ Original bullet:
     return rewritten or fallback_rewrite_bullet(bullet, mode, jd)
 
 
-def build_html(data: dict, style: str | None = None) -> str:
+def fallback_cover_letter(resume: str, jd: str) -> str:
+    role = infer_role(jd, resume)
+    matched = important_terms(jd)[:5]
+    skills_sentence = ", ".join(term.title() for term in matched) or "the role's required skills"
+    return (
+        f"Dear Hiring Manager,\n\n"
+        f"I am excited to apply for the {role} position. My background aligns well with this opportunity, "
+        f"especially around {skills_sentence}. I bring a practical, outcome-focused approach and can translate "
+        f"technical requirements into reliable execution.\n\n"
+        f"In my resume, you will find experience and projects that demonstrate problem solving, ownership, "
+        f"and the ability to contribute quickly. I would welcome the chance to discuss how my skills can support "
+        f"your team's goals.\n\n"
+        f"Sincerely,\n"
+        f"Your Name"
+    )
+
+
+def generate_cover_letter_text(resume: str, jd: str, api_key: str | None = None) -> str:
+    api_key = get_gemini_api_key(api_key)
+    if not api_key:
+        return fallback_cover_letter(resume, jd)
+
+    prompt = f"""
+Write a concise, recruiter-ready cover letter tailored to this job.
+Rules:
+- Use only truthful information inferred from the resume.
+- Do not invent company names, dates, degrees, employers, or metrics.
+- Keep it under 260 words.
+- Return plain text only.
+
+Job description:
+{jd[:5000]}
+
+Resume:
+{resume[:8000]}
+"""
+
+    def call_gemini():
+        import google.generativeai as genai
+
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(GEMINI_MODEL)
+        return model.generate_content(prompt).text.strip()
+
+    future = AI_EXECUTOR.submit(call_gemini)
+    try:
+        return future.result(timeout=22) or fallback_cover_letter(resume, jd)
+    except Exception:
+        return fallback_cover_letter(resume, jd)
+
+
+def build_html(
+    data: dict,
+    style: str | None = None,
+    font: str | None = None,
+    spacing: str | None = None,
+    theme: str | None = None,
+) -> str:
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as template_file:
         template = template_file.read()
 
     replacements = {
-        "{{template_class}}": template_class(style),
+        "{{template_class}}": resume_body_classes(style, theme, spacing),
+        "{{font_family}}": resume_font(font),
         "{{header_block}}": data["header"],
         "{{summary}}": text_html(data.get("summary")),
         "{{skills}}": list_html(data.get("skills")),
@@ -1940,6 +2043,9 @@ async def optimize_resume(
     api_key: str | None = Form(None),
     user_email: str | None = Form(None),
     template_style: str | None = Form(None),
+    font_style: str | None = Form(None),
+    spacing_style: str | None = Form(None),
+    theme_style: str | None = Form(None),
 ):
     api_key = get_gemini_api_key(api_key)
     if not api_key:
@@ -1949,6 +2055,11 @@ async def optimize_resume(
         )
 
     text = extract_text(resume_file)
+    if not text.strip():
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Could not read resume text. Upload a text-based DOCX or PDF file."},
+        )
     education = extract_education(text)
     try:
         analysis = analyze_and_optimize(jd, text)
@@ -1968,7 +2079,7 @@ async def optimize_resume(
         **analysis["optimized_resume"],
     }
 
-    rendered_html = build_html(data, template_style)
+    rendered_html = build_html(data, template_style, font_style, spacing_style, theme_style)
     fid = str(uuid.uuid4())[:8]
 
     html_path = os.path.join(OUTPUT_DIR, f"{fid}.html")
@@ -1996,8 +2107,10 @@ async def optimize_resume(
         "matched_keywords": analysis["matched_keywords"],
         "changes_to_make": analysis["changes_to_make"],
         "ats_notes": analysis["ats_notes"],
+        "optimized_resume": analysis["optimized_resume"],
         "analysis_url": f"/analysis/{fid}",
         "preview_url": f"/preview/{fid}",
+        "share_url": f"/preview/{fid}",
         "download_pdf": f"/pdf/{fid}",
         "download_docx": f"/docx/{fid}",
         "payment_required": not owner_exempt,
@@ -2025,6 +2138,71 @@ async def rewrite_resume_bullet(request: Request):
         return JSONResponse(status_code=400, content={"error": "Add a bullet point to rewrite."})
 
     return {"rewritten": rewrite_bullet(bullet, mode, jd, api_key)}
+
+
+@app.post("/cover-letter")
+async def cover_letter(
+    resume_file: UploadFile = File(...),
+    jd: str = Form(...),
+    api_key: str | None = Form(None),
+):
+    resume_text = extract_text(resume_file)
+    if not resume_text.strip():
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Could not read resume text. Upload a text-based DOCX or PDF file."},
+        )
+
+    return {"cover_letter": generate_cover_letter_text(resume_text, jd, api_key)}
+
+
+@app.post("/github-import")
+async def github_import(request: Request):
+    payload = await request.json()
+    username = re.sub(r"[^A-Za-z0-9-]", "", str(payload.get("username", "")).strip())
+    if not username:
+        return JSONResponse(status_code=400, content={"error": "Enter a GitHub username."})
+
+    try:
+        headers = {"User-Agent": "ResumeFit-Pro"}
+        user_request = urllib.request.Request(f"https://api.github.com/users/{username}", headers=headers)
+        repos_request = urllib.request.Request(
+            f"https://api.github.com/users/{username}/repos?sort=updated&per_page=8",
+            headers=headers,
+        )
+        with urllib.request.urlopen(user_request, timeout=12) as response:
+            profile = json.loads(response.read().decode("utf-8"))
+        with urllib.request.urlopen(repos_request, timeout=12) as response:
+            repos = json.loads(response.read().decode("utf-8"))
+    except Exception:
+        return JSONResponse(status_code=502, content={"error": "Could not import this GitHub profile."})
+
+    projects = []
+    languages = []
+    for repo in repos:
+        if repo.get("fork"):
+            continue
+        language = repo.get("language")
+        if language:
+            languages.append(language)
+        projects.append(
+            {
+                "name": repo.get("name", ""),
+                "description": repo.get("description") or "GitHub project",
+                "url": repo.get("html_url", ""),
+                "language": language or "",
+                "stars": repo.get("stargazers_count", 0),
+            }
+        )
+
+    return {
+        "name": profile.get("name") or username,
+        "headline": profile.get("bio") or "",
+        "profile_url": profile.get("html_url"),
+        "public_repos": profile.get("public_repos", 0),
+        "skills": unique_items(languages)[:8],
+        "projects": projects[:5],
+    }
 
 
 @app.get("/analysis/{fid}", response_class=HTMLResponse)

@@ -1263,6 +1263,38 @@ textarea {
   justify-content: space-between;
 }
 
+.trust-section {
+  max-width: 1260px;
+  margin: 18px auto 0;
+  padding: 0 24px;
+}
+
+.trust-grid {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.trust-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 14px;
+  box-shadow: 0 10px 24px rgba(23, 32, 51, 0.06);
+}
+
+.trust-card strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--navy);
+}
+
+.trust-card span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .restore-banner.visible {
   display: flex;
 }
@@ -1290,6 +1322,12 @@ textarea {
 .template-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.customize-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1354,7 +1392,10 @@ textarea {
 }
 
 .rewrite-card,
-.version-card {
+.version-card,
+.cover-card,
+.import-card,
+.section-rewrite-card {
   margin-top: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1363,7 +1404,10 @@ textarea {
 }
 
 .rewrite-card h3,
-.version-card h3 {
+.version-card h3,
+.cover-card h3,
+.import-card h3,
+.section-rewrite-card h3 {
   margin: 0 0 10px;
   font-size: 15px;
 }
@@ -1380,6 +1424,44 @@ textarea {
   border: 1px solid var(--line);
   color: var(--ink);
   min-height: 42px;
+}
+
+.section-bullets {
+  display: grid;
+  gap: 10px;
+}
+
+.bullet-tool {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfdff;
+}
+
+.bullet-tool p {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.cover-output {
+  white-space: pre-wrap;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdff;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.import-output {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .version-row input,
@@ -1453,7 +1535,9 @@ textarea {
   }
 
   .template-grid,
-  .dashboard-grid {
+  .dashboard-grid,
+  .customize-grid,
+  .trust-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1513,6 +1597,15 @@ textarea {
     </aside>
   </section>
 
+  <section class="trust-section">
+    <div class="trust-grid">
+      <div class="trust-card"><strong>Built to land more interviews</strong><span>ResumeFit Pro now focuses on job-description fit, ATS readiness, recruiter clarity, and reusable application versions.</span></div>
+      <div class="trust-card"><strong>Before vs after scoring</strong><span>See your current ATS estimate, optimized target, missing keywords, and skill alignment in one dashboard.</span></div>
+      <div class="trust-card"><strong>Privacy-first workflow</strong><span>Uploads are processed only to generate your resume, analysis, cover letter, and exports.</span></div>
+      <div class="trust-card"><strong>Premium exports</strong><span>Create DOCX, PDF, preview links, and tailored cover letters from the same job description.</span></div>
+    </div>
+  </section>
+
   <main class="workspace">
     <section class="panel intake">
       <div class="section-kicker">Optimizer input</div>
@@ -1543,8 +1636,8 @@ textarea {
 
       <form id="form">
         <div>
-          <label for="resume_file">Existing resume <span>.docx</span></label>
-          <input id="resume_file" name="resume_file" type="file" accept=".docx" required>
+          <label for="resume_file">Existing resume <span>DOCX or PDF</span></label>
+          <input id="resume_file" name="resume_file" type="file" accept=".docx,.pdf" required>
         </div>
         <div>
           <label for="user_email">Email <span>for download access</span></label>
@@ -1558,10 +1651,30 @@ textarea {
           <label>Template <span>choose a resume style</span></label>
           <div class="template-grid">
             <label class="template-option"><input type="radio" name="template_style" value="minimal" checked> Minimal ATS</label>
-            <label class="template-option"><input type="radio" name="template_style" value="modern"> Modern Tech</label>
+            <label class="template-option"><input type="radio" name="template_style" value="software"> Software Engineer</label>
             <label class="template-option"><input type="radio" name="template_style" value="fresher"> Fresher</label>
             <label class="template-option"><input type="radio" name="template_style" value="corporate"> Corporate</label>
-            <label class="template-option"><input type="radio" name="template_style" value="creative"> Creative</label>
+            <label class="template-option"><input type="radio" name="template_style" value="product"> Product Manager</label>
+            <label class="template-option"><input type="radio" name="template_style" value="designer"> Designer</label>
+          </div>
+        </div>
+        <div>
+          <label>Customize <span>font, spacing, theme</span></label>
+          <div class="customize-grid">
+            <select id="font_style" name="font_style" aria-label="Font style">
+              <option value="arial">Arial</option>
+              <option value="calibri">Calibri</option>
+              <option value="georgia">Georgia</option>
+            </select>
+            <select id="spacing_style" name="spacing_style" aria-label="Spacing">
+              <option value="balanced">Balanced</option>
+              <option value="compact">Compact</option>
+              <option value="relaxed">Relaxed</option>
+            </select>
+            <select id="theme_style" name="theme_style" aria-label="Theme">
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
           </div>
         </div>
         <div class="button-row">
@@ -1595,6 +1708,21 @@ textarea {
           <button class="mini-button" type="button" data-rewrite="ats">ATS optimize</button>
         </div>
         <div id="rewrite-output" class="rewrite-output">Rewritten bullets appear here.</div>
+      </div>
+
+      <div class="cover-card">
+        <h3>Cover Letter Generator</h3>
+        <button class="mini-button" type="button" id="generate-cover-letter">Generate tailored cover letter</button>
+        <div id="cover-output" class="cover-output">Cover letter appears after generation.</div>
+      </div>
+
+      <div class="import-card">
+        <h3>GitHub Import</h3>
+        <div class="version-row">
+          <input id="github-username" type="text" placeholder="github username">
+          <button class="mini-button" type="button" id="import-github">Import projects</button>
+        </div>
+        <div id="github-output" class="import-output">Imported GitHub skills and projects appear here.</div>
       </div>
 
       <div class="install-panel">
@@ -1660,6 +1788,11 @@ textarea {
           <div class="change-list">
             <h3>Recommended Changes</h3>
             <div id="changes" class="placeholder">No analysis yet.</div>
+          </div>
+
+          <div class="section-rewrite-card">
+            <h3>Rewrite Resume Sections</h3>
+            <div id="section-bullets" class="section-bullets placeholder">Run analysis to rewrite experience, project, and achievement bullets.</div>
           </div>
 
           <div class="preview-card">
@@ -1734,7 +1867,11 @@ function currentDraft() {
     email: document.getElementById("user_email").value,
     jd: document.getElementById("jd").value,
     template: selectedTemplate(),
+    font: document.getElementById("font_style").value,
+    spacing: document.getElementById("spacing_style").value,
+    theme: document.getElementById("theme_style").value,
     bullet: document.getElementById("bullet-input").value,
+    github: document.getElementById("github-username").value,
     savedAt: new Date().toISOString(),
   };
 }
@@ -1744,8 +1881,12 @@ function applyDraft(draft) {
   document.getElementById("user_email").value = draft.email || "";
   document.getElementById("jd").value = draft.jd || "";
   document.getElementById("bullet-input").value = draft.bullet || "";
+  document.getElementById("github-username").value = draft.github || "";
   const templateInput = form.querySelector(`[name="template_style"][value="${draft.template || "minimal"}"]`);
   if (templateInput) templateInput.checked = true;
+  document.getElementById("font_style").value = draft.font || "arial";
+  document.getElementById("spacing_style").value = draft.spacing || "balanced";
+  document.getElementById("theme_style").value = draft.theme || "light";
   renderLivePreview();
 }
 
@@ -1762,9 +1903,12 @@ function previewAccent() {
   return {
     minimal: "#111827",
     modern: "#0f766e",
+    software: "#0f766e",
     fresher: "#1d4ed8",
     corporate: "#374151",
     creative: "#7c3aed",
+    product: "#7f1d1d",
+    designer: "#be185d",
   }[selectedTemplate()] || "#111827";
 }
 
@@ -1773,14 +1917,17 @@ function renderLivePreview() {
   const email = document.getElementById("user_email").value.trim();
   const role = jd.match(/\b(engineer|developer|analyst|administrator|manager|designer|specialist)\b/i)?.[0] || "Target Role";
   const accent = previewAccent();
+  const font = document.getElementById("font_style").value === "georgia" ? "Georgia,serif" : document.getElementById("font_style").value === "calibri" ? "Calibri,Arial,sans-serif" : "Arial,sans-serif";
+  const dark = document.getElementById("theme_style").value === "dark";
+  const lineHeight = document.getElementById("spacing_style").value === "compact" ? "1.35" : document.getElementById("spacing_style").value === "relaxed" ? "1.75" : "1.55";
   const keywords = jd.split(/\W+/).filter((word) => word.length > 4).slice(0, 10);
   livePreview.srcdoc = `<!doctype html><html><head><style>
-    body{margin:0;font-family:Arial,sans-serif;color:#111827;background:white}
-    .page{width:210mm;min-height:297mm;margin:auto;display:grid;grid-template-columns:32% 68%;box-shadow:inset 0 -1px #d9e2ec}
+    body{margin:0;font-family:${font};color:${dark ? "#f8fafc" : "#111827"};background:${dark ? "#0f172a" : "white"}}
+    .page{width:210mm;min-height:297mm;margin:auto;display:grid;grid-template-columns:32% 68%;box-shadow:inset 0 -1px #d9e2ec;background:${dark ? "#111827" : "white"}}
     aside{background:${accent};color:white;padding:25px}main{padding:30px}
     h1{font-size:24px;margin:0 0 6px}.role{font-size:13px;color:#dbeafe;margin-bottom:14px}
-    h2{font-size:13px;text-transform:uppercase;border-bottom:2px solid #111827;padding-bottom:4px;margin:20px 0 8px}
-    aside h2{border-color:rgba(255,255,255,.55)}p,li{font-size:13px;line-height:1.55}.muted{color:#64748b}
+    h2{font-size:13px;text-transform:uppercase;border-bottom:2px solid ${dark ? "#e5e7eb" : "#111827"};padding-bottom:4px;margin:20px 0 8px}
+    aside h2{border-color:rgba(255,255,255,.55)}p,li{font-size:13px;line-height:${lineHeight}}.muted{color:${dark ? "#cbd5e1" : "#64748b"}}
     .break{height:1px;background:repeating-linear-gradient(90deg,#cbd5e1 0 8px,transparent 8px 14px);margin:16px 0}
   </style></head><body><div class="page"><aside>
     <h1>Your Name</h1><div class="role">${escapeHtml(role)}</div><p>${escapeHtml(email || "you@example.com")}</p>
@@ -1832,6 +1979,74 @@ function renderVersionList() {
     : `<option value="">No saved versions yet</option>`;
 }
 
+function flattenResumeBullets(optimized = {}) {
+  const sections = [];
+  const addText = (section, text) => {
+    if (String(text || "").trim()) sections.push({ section, text: String(text).trim() });
+  };
+  const addItems = (section, items) => {
+    (items || []).forEach((item) => {
+      if (typeof item === "string") {
+        addText(section, item);
+        return;
+      }
+      (item.bullets || item.responsibilities || item.achievements || []).forEach((bullet) => addText(section, bullet));
+      addText(section, item.description || item.summary);
+    });
+  };
+  addItems("Experience", optimized.experience);
+  addItems("Projects", optimized.projects);
+  (optimized.achievements || []).forEach((item) => addText("Achievements", item));
+  return sections.slice(0, 12);
+}
+
+function renderSectionBullets(optimized) {
+  const bullets = flattenResumeBullets(optimized);
+  const box = document.getElementById("section-bullets");
+  if (!bullets.length) {
+    box.className = "section-bullets placeholder";
+    box.textContent = "No rewriteable bullets returned yet.";
+    return;
+  }
+  box.className = "section-bullets";
+  box.innerHTML = bullets.map((item, index) => `
+    <div class="bullet-tool">
+      <p><strong>${escapeHtml(item.section)}</strong>: <span id="section-bullet-${index}">${escapeHtml(item.text)}</span></p>
+      <div class="rewrite-actions">
+        <button class="mini-button" type="button" data-section-rewrite="${index}" data-mode="improve">Improve</button>
+        <button class="mini-button" type="button" data-section-rewrite="${index}" data-mode="ats">ATS Optimize</button>
+        <button class="mini-button" type="button" data-section-rewrite="${index}" data-mode="shorten">Shorten</button>
+        <button class="mini-button" type="button" data-section-rewrite="${index}" data-mode="quantify">Quantify</button>
+        <button class="mini-button" type="button" data-section-rewrite="${index}" data-mode="professionalize">Professional Tone</button>
+      </div>
+    </div>
+  `).join("");
+  box.querySelectorAll("[data-section-rewrite]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = button.dataset.sectionRewrite;
+      const output = document.getElementById(`section-bullet-${id}`);
+      output.textContent = "Rewriting...";
+      const response = await rewriteBulletText(bullets[Number(id)].text, button.dataset.mode);
+      output.textContent = response;
+    });
+  });
+}
+
+async function rewriteBulletText(bullet, mode) {
+  if (!bullet.trim()) return "Add a bullet point to rewrite.";
+  try {
+    const response = await fetch("/rewrite-bullet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bullet, mode, jd: document.getElementById("jd").value }),
+    });
+    const data = await response.json();
+    return response.ok ? data.rewritten : data.error || "Could not rewrite this bullet.";
+  } catch {
+    return "Could not reach the rewriter. Please retry.";
+  }
+}
+
 function loadRazorpayCheckout() {
   return new Promise((resolve, reject) => {
     if (window.Razorpay) {
@@ -1853,6 +2068,7 @@ function renderDownloadLinks(data, token) {
     <a href="${withToken(data.download_docx, token)}" class="primary-link">Download Word document</a>
     <a href="${withToken(data.download_pdf, token)}">Download PDF</a>
     <a href="${data.preview_url}">Preview optimized resume</a>
+    <a href="${data.share_url || data.preview_url}">Public resume link</a>
     <a href="${data.analysis_url}">View full analysis</a>
   `;
 }
@@ -1961,6 +2177,7 @@ function renderPaymentPrompt(data) {
     <p class="download-note">${hasFreeTrial ? "Use a free trial to unlock Word and PDF downloads for this optimized resume. Payment starts after your free trials are used." : "Preview and analysis are free. Complete payment once to unlock Word and PDF downloads for this optimized resume."}</p>
     <button type="button" id="pay-download">${hasFreeTrial ? "Use free trial download" : "Pay and unlock download"}</button>
     <a href="${data.preview_url}">Preview optimized resume</a>
+    <a href="${data.share_url || data.preview_url}">Public resume link</a>
     <a href="${data.analysis_url}">View full analysis</a>
   `;
   document.getElementById("pay-download").addEventListener("click", () => {
@@ -2014,22 +2231,60 @@ document.querySelectorAll("[data-rewrite]").forEach((button) => {
   button.addEventListener("click", async () => {
     const bullet = document.getElementById("bullet-input").value.trim();
     rewriteOutput.textContent = "Rewriting...";
-    try {
-      const response = await fetch("/rewrite-bullet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bullet,
-          mode: button.dataset.rewrite,
-          jd: document.getElementById("jd").value,
-        }),
-      });
-      const data = await response.json();
-      rewriteOutput.textContent = response.ok ? data.rewritten : data.error || "Could not rewrite this bullet.";
-    } catch {
-      rewriteOutput.textContent = "Could not reach the rewriter. Please retry.";
-    }
+    rewriteOutput.textContent = await rewriteBulletText(bullet, button.dataset.rewrite);
   });
+});
+
+document.getElementById("generate-cover-letter").addEventListener("click", async () => {
+  const resumeFile = document.getElementById("resume_file").files[0];
+  const jd = document.getElementById("jd").value.trim();
+  const coverOutput = document.getElementById("cover-output");
+  if (!resumeFile || !jd) {
+    coverOutput.textContent = "Upload a resume and paste a job description first.";
+    return;
+  }
+  coverOutput.textContent = "Generating tailored cover letter...";
+  const body = new FormData();
+  body.append("resume_file", resumeFile);
+  body.append("jd", jd);
+  try {
+    const response = await fetch("/cover-letter", { method: "POST", body });
+    const data = await response.json();
+    coverOutput.textContent = response.ok ? data.cover_letter : data.error || "Could not generate cover letter.";
+  } catch {
+    coverOutput.textContent = "Could not reach the cover letter generator. Please retry.";
+  }
+});
+
+document.getElementById("import-github").addEventListener("click", async () => {
+  const username = document.getElementById("github-username").value.trim();
+  const output = document.getElementById("github-output");
+  if (!username) {
+    output.textContent = "Enter a GitHub username first.";
+    return;
+  }
+  output.textContent = "Importing GitHub profile...";
+  try {
+    const response = await fetch("/github-import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      output.textContent = data.error || "Could not import GitHub profile.";
+      return;
+    }
+    const skills = data.skills?.length ? `Skills: ${data.skills.join(", ")}` : "No dominant languages found.";
+    const projects = (data.projects || []).map((project) => `${project.name}: ${project.description}`).join("\n");
+    output.textContent = `${data.name} imported. ${skills}\n${projects}`;
+    document.getElementById("bullet-input").value = (data.projects || [])[0]
+      ? `Built ${data.projects[0].name}, ${data.projects[0].description}`
+      : document.getElementById("bullet-input").value;
+    saveDraft();
+  } catch {
+    output.textContent = "Could not reach GitHub import. Please retry.";
+  }
 });
 
 document.getElementById("save-version").addEventListener("click", () => {
@@ -2070,6 +2325,10 @@ form.addEventListener("reset", () => {
   changesBox.textContent = "No analysis yet.";
   downloadsBox.className = "placeholder";
   downloadsBox.textContent = "Downloads appear after optimization.";
+  document.getElementById("section-bullets").className = "section-bullets placeholder";
+  document.getElementById("section-bullets").textContent = "Run analysis to rewrite experience, project, and achievement bullets.";
+  document.getElementById("cover-output").textContent = "Cover letter appears after generation.";
+  document.getElementById("github-output").textContent = "Imported GitHub skills and projects appear here.";
   renderDashboard();
   setTimeout(() => {
     renderLivePreview();
@@ -2116,6 +2375,7 @@ form.addEventListener("submit", async (event) => {
   resultSubtitle.textContent = "Review recommendations, preview the resume, or download the Word document.";
   statusBox.textContent = "Optimization complete.";
   renderDashboard(data.score_breakdown || {});
+  renderSectionBullets(data.optimized_resume || {});
   livePreview.srcdoc = "";
   livePreview.src = data.preview_url;
 

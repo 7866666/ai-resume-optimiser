@@ -14,7 +14,7 @@
 }
 
 body {
-  font-family: Arial, sans-serif;
+  font-family: {{font_family}};
   margin: 0;
   color: #111827;
 }
@@ -35,6 +35,14 @@ body.template-creative .left {
   background: #7c3aed;
 }
 
+body.template-product .left {
+  background: #7f1d1d;
+}
+
+body.template-designer .left {
+  background: #be185d;
+}
+
 body.template-minimal .page {
   display: block;
   padding: 24px 30px;
@@ -51,6 +59,49 @@ body.template-minimal .right {
 body.template-minimal .contact a,
 body.template-minimal li.skill-subheading {
   color: #111827;
+}
+
+body.theme-dark {
+  background: #0f172a;
+}
+
+body.theme-dark .page {
+  background: #111827;
+  color: #f8fafc;
+}
+
+body.theme-dark .right .section-title {
+  border-color: #e5e7eb;
+}
+
+body.theme-dark .item-meta {
+  color: #cbd5e1;
+}
+
+body.theme-dark.template-minimal .left,
+body.theme-dark.template-minimal .right {
+  background: #111827;
+  color: #f8fafc;
+}
+
+body.spacing-compact li,
+body.spacing-compact p {
+  line-height: 1.32;
+  margin-bottom: 4px;
+}
+
+body.spacing-compact .section-title {
+  margin-top: 14px;
+}
+
+body.spacing-relaxed li,
+body.spacing-relaxed p {
+  line-height: 1.75;
+  margin-bottom: 9px;
+}
+
+body.spacing-relaxed .section-title {
+  margin-top: 26px;
 }
 
 .page {
