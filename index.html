@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#102a43">
-<meta name="description" content="AI resume optimizer with ATS scoring, job-description matching, recruiter-ready preview, and Word document output.">
+<meta name="description" content="AI resume optimizer with ATS scoring, job-description matching, recruiter-ready preview, and Word/PDF document output.">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/app-logo-icon.png" type="image/png">
 <title>ResumeFit Pro</title>
@@ -1626,7 +1626,7 @@ textarea {
       </div>
       <div class="guide-step">
         <div class="guide-num">3</div>
-        <div><strong>Review and download</strong><span>Preview the result and export a polished Word document.</span></div>
+        <div><strong>Review and download</strong><span>Preview the result and export polished Word and PDF files.</span></div>
       </div>
     </aside>
   </section>
@@ -1794,7 +1794,7 @@ textarea {
         <div>
           <div class="section-kicker">Live analysis</div>
           <h2>Optimization Results</h2>
-          <p id="result-subtitle">Run an analysis to view ATS score, changes, preview, and Word download.</p>
+          <p id="result-subtitle">Run an analysis to view ATS score, changes, preview, and Word/PDF downloads.</p>
         </div>
         <div class="live-badge"><span class="live-dot"></span><span id="result-state">Ready</span></div>
       </div>
@@ -2133,7 +2133,7 @@ function renderDownloadLinks(data, token) {
     <a href="${withToken(data.download_pdf, token)}">Download PDF</a>
     <a href="${data.preview_url}">Preview optimized resume</a>
     <a href="${data.share_url || data.preview_url}">Public resume link</a>
-    <a href="${data.analysis_url}">View full analysis</a>
+    <a href="${withToken(data.analysis_url, token)}">View full analysis</a>
   `;
 }
 
@@ -2399,7 +2399,7 @@ form.addEventListener("reset", () => {
   targetScore.textContent = "--";
   keywordCount.textContent = "--";
   resultState.textContent = "Ready";
-  resultSubtitle.textContent = "Run an analysis to view ATS score, changes, preview, and Word download.";
+  resultSubtitle.textContent = "Run an analysis to view ATS score, changes, preview, and Word/PDF downloads.";
   changesBox.className = "placeholder";
   changesBox.textContent = "No analysis yet.";
   downloadsBox.className = "placeholder";
@@ -2454,7 +2454,7 @@ form.addEventListener("submit", async (event) => {
   targetScore.textContent = `${data.target_ats_score}%+`;
   keywordCount.textContent = missing.length;
   resultState.textContent = "Complete";
-  resultSubtitle.textContent = "Review recommendations, preview the resume, or download the Word document.";
+  resultSubtitle.textContent = "Review recommendations, preview the resume, or download the Word or PDF file.";
   statusBox.textContent = "Optimization complete.";
   renderDashboard(data.score_breakdown || {});
   renderQualityMetrics(data.quality_metrics || {});

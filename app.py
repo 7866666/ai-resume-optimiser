@@ -141,7 +141,7 @@ a { color: #0c6576; }
 <h2>Data Processed</h2>
 <p>The application processes uploaded resume content, job descriptions, generated analysis, optimized resume text, and downloaded document output.</p>
 <h2>Purpose</h2>
-<p>Data is used only to provide ATS analysis, resume recommendations, preview, and Word document generation.</p>
+<p>Data is used only to provide ATS analysis, resume recommendations, preview, and Word/PDF document generation.</p>
 <h2>Third-Party AI Processing</h2>
 <p>Resume and job description content may be sent to the configured Gemini API provider to generate optimization results.</p>
 <h2>Storage</h2>
@@ -1735,7 +1735,7 @@ def build_html(
     return template
 
 
-def build_analysis_html(fid: str, analysis: dict) -> str:
+def build_analysis_html(fid: str, analysis: dict, token: str | None = None) -> str:
     breakdown = analysis.get("score_breakdown") or {}
     breakdown_html = "".join(
         [
@@ -1746,6 +1746,8 @@ def build_analysis_html(fid: str, analysis: dict) -> str:
             percent_bar("ATS readability", breakdown.get("formatting_ats_readability", 0)),
         ]
     )
+    safe_fid = html.escape(fid)
+    token_query = f"?token={html.escape(token)}" if token else ""
 
     return f"""
 <!DOCTYPE html>
@@ -1863,8 +1865,9 @@ li {{
       <p>Estimated fit and changes needed before downloading the optimized resume.</p>
     </div>
     <div class="actions">
-      <a class="button" href="/preview/{html.escape(fid)}">View optimized resume</a>
-      <a class="button" href="/pdf/{html.escape(fid)}">Download PDF</a>
+      <a class="button" href="/preview/{safe_fid}">View optimized resume</a>
+      <a class="button" href="/docx/{safe_fid}{token_query}">Download Word</a>
+      <a class="button" href="/pdf/{safe_fid}{token_query}">Download PDF</a>
     </div>
   </div>
 
@@ -2250,14 +2253,14 @@ async def github_import(request: Request):
 
 
 @app.get("/analysis/{fid}", response_class=HTMLResponse)
-def analysis_page(fid: str):
+def analysis_page(fid: str, token: str | None = None):
     cursor.execute("SELECT analysis_json FROM resumes WHERE id=?", (fid,))
     row = cursor.fetchone()
 
     if not row or not row[0]:
         return HTMLResponse(content="Not found", status_code=404)
 
-    return HTMLResponse(content=build_analysis_html(fid, json.loads(row[0])))
+    return HTMLResponse(content=build_analysis_html(fid, json.loads(row[0]), token))
 
 
 # ================= PREVIEW =================
@@ -2292,7 +2295,7 @@ def download_pdf(fid: str, token: str | None = None):
 
     generate_pdf(rendered_html, pdf_path)
 
-    return FileResponse(pdf_path, filename="resume.pdf", media_type="application/pdf")
+    return FileResponse(pdf_path, filename="optimized_resume.pdf", media_type="application/pdf")
 
 
 @app.get("/docx/{fid}")
