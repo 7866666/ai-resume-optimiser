@@ -1169,28 +1169,48 @@ def generate_styled_pdf_from_html(rendered_html: str, pdf_path: str):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.pdfgen import canvas
-    from reportlab.platypus import Paragraph
+    from reportlab.platypus import HRFlowable, Paragraph
 
     page_width, page_height = A4
     left_width = page_width * 0.30
-    left_x = 18
-    right_x = left_width + 22
-    top = page_height - 28
-    bottom = 28
-    left_content_width = left_width - 32
-    right_content_width = page_width - right_x - 32
+    left_x = 15
+    right_x = left_width + 24
+    top = page_height - 24
+    bottom = 24
+    left_content_width = left_width - 30
+    right_content_width = page_width - right_x - 24
+
+    body_class = ""
+    body_match = re.search(r'<body[^>]*class="([^"]*)"', rendered_html, flags=re.IGNORECASE)
+    if body_match:
+        body_class = body_match.group(1)
+
+    sidebar_colors = {
+        "template-modern": "#0f766e",
+        "template-fresher": "#1d4ed8",
+        "template-corporate": "#374151",
+        "template-creative": "#7c3aed",
+        "template-product": "#7f1d1d",
+        "template-designer": "#be185d",
+    }
+    sidebar_color = "#0f172a"
+    for class_name, color_value in sidebar_colors.items():
+        if class_name in body_class:
+            sidebar_color = color_value
+            break
 
     pdf = canvas.Canvas(pdf_path, pagesize=A4)
     styles = getSampleStyleSheet()
 
-    left_title = ParagraphStyle("left_title", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=16, leading=19, textColor=colors.white)
-    left_role = ParagraphStyle("left_role", parent=styles["Normal"], fontSize=7.2, leading=9, textColor=colors.white)
-    left_text = ParagraphStyle("left_text", parent=styles["Normal"], fontSize=6.2, leading=7.6, textColor=colors.white)
-    left_heading = ParagraphStyle("left_heading", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=14, leading=17, textColor=colors.white)
-    right_heading = ParagraphStyle("right_heading", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=11.2, leading=13.2)
-    right_text = ParagraphStyle("right_text", parent=styles["Normal"], fontSize=7.8, leading=9.6, textColor=colors.black)
-    item_title = ParagraphStyle("item_title", parent=right_text, fontName="Helvetica-Bold", fontSize=8.6, leading=10.2)
-    item_meta = ParagraphStyle("item_meta", parent=right_text, fontSize=7.2, leading=8.8, textColor=colors.HexColor("#64748b"))
+    left_title = ParagraphStyle("left_title", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=15, leading=17, textColor=colors.white)
+    left_role = ParagraphStyle("left_role", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=7.4, leading=8.8, textColor=colors.white)
+    left_text = ParagraphStyle("left_text", parent=styles["Normal"], fontSize=7.1, leading=8.7, textColor=colors.white, bulletIndent=0, leftIndent=7, firstLineIndent=-7)
+    left_heading = ParagraphStyle("left_heading", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=10.5, leading=12.5, textColor=colors.white)
+    right_heading = ParagraphStyle("right_heading", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=10, leading=12, spaceBefore=3)
+    right_text = ParagraphStyle("right_text", parent=styles["Normal"], fontSize=8.6, leading=12.2, textColor=colors.black, bulletIndent=0, leftIndent=10, firstLineIndent=-10)
+    right_paragraph = ParagraphStyle("right_paragraph", parent=styles["Normal"], fontSize=8.8, leading=13.3, textColor=colors.black)
+    item_title = ParagraphStyle("item_title", parent=right_paragraph, fontName="Helvetica-Bold", fontSize=9.2, leading=11.4)
+    item_meta = ParagraphStyle("item_meta", parent=right_paragraph, fontSize=7.8, leading=9.8, textColor=colors.HexColor("#64748b"))
 
     def p(text, style):
         safe = html.escape(text).replace("\n", "<br/>")
@@ -1202,7 +1222,7 @@ def generate_styled_pdf_from_html(rendered_html: str, pdf_path: str):
         return Paragraph(safe, style)
 
     def start_page():
-        pdf.setFillColor(colors.HexColor("#0f172a"))
+        pdf.setFillColor(colors.HexColor(sidebar_color))
         pdf.rect(0, 0, left_width, page_height, stroke=0, fill=1)
         pdf.setFillColor(colors.white)
 
@@ -1221,6 +1241,12 @@ def generate_styled_pdf_from_html(rendered_html: str, pdf_path: str):
             y = draw_flowable(flowable, x, y, width, gap)
         return y
 
+    def section_heading(title: str):
+        return [
+            (p(title.upper(), right_heading), 2),
+            (HRFlowable(width="100%", thickness=0.8, color=colors.black, spaceBefore=0, spaceAfter=0), 6),
+        ]
+
     left = [
         (p(class_text(rendered_html, "header-name"), left_title), 3),
         (p(class_text(rendered_html, "header-role"), left_role), 8),
@@ -1237,9 +1263,9 @@ def generate_styled_pdf_from_html(rendered_html: str, pdf_path: str):
             if len(parts) == 2 and parts[1].strip():
                 left.append((p(f"- {parts[1].strip()}", left_text), 3))
         else:
-            left.append((p(f"- {item}", left_text), 3))
+            left.append((p(f"- {item}", left_text), 4))
     left.append((p("CERTIFICATIONS", left_heading), 5))
-    left.extend((p(f"- {item}", left_text), 3) for item in li_texts(section_html(rendered_html, "Certifications")))
+    left.extend((p(f"- {item}", left_text), 4) for item in li_texts(section_html(rendered_html, "Certifications")))
 
     right = []
     for title in ["Summary", "Experience", "Projects", "Education", "Achievements"]:
@@ -1247,7 +1273,7 @@ def generate_styled_pdf_from_html(rendered_html: str, pdf_path: str):
         if not content:
             continue
 
-        right.append((p(title.upper(), right_heading), 5))
+        right.extend(section_heading(title))
         blocks = resume_item_blocks(content)
         if blocks:
             for block in blocks:
@@ -1258,19 +1284,19 @@ def generate_styled_pdf_from_html(rendered_html: str, pdf_path: str):
                 if block_meta:
                     right.append((p(block_meta, item_meta), 3))
                 for item in li_texts(block):
-                    right.append((p(f"- {item}", right_text), 2))
+                    right.append((p(f"- {item}", right_text), 4))
                 desc = strip_html(re.sub(r"<ul.*?</ul>", "", block, flags=re.IGNORECASE | re.DOTALL))
                 desc = "\n".join(line for line in desc.splitlines() if line not in [block_title, block_meta])
                 if desc:
-                    right.append((p(desc, right_text), 4))
-                right.append((p("", right_text), 3))
+                    right.append((p(desc, right_paragraph), 5))
+                right.append((p("", right_paragraph), 2))
         else:
             items = li_texts(content)
             if items:
-                right.extend((p(f"- {item}", right_text), 2) for item in items)
+                right.extend((p(f"- {item}", right_text), 4) for item in items)
             else:
-                right.append((p(strip_html(content), right_text), 10))
-        right.append((p("", right_text), 5))
+                right.append((p(strip_html(content), right_paragraph), 10))
+        right.append((p("", right_paragraph), 4))
 
     start_page()
     draw_column(left, left_x, top, left_content_width)
