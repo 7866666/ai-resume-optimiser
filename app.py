@@ -65,7 +65,7 @@ def get_gemini_api_key(submitted_key: str | None = None) -> str:
     return ""
 
 
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 GEMINI_API_KEY = get_gemini_api_key()
 
 RESUME_PRICE_RUPEES = int(os.getenv("RESUME_PRICE_RUPEES", "49"))

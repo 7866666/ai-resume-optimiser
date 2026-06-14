@@ -24,7 +24,7 @@ Set environment variables:
 
 ```text
 GEMINI_API_KEY=your_key
-GEMINI_MODEL=gemini-3-flash-preview
+GEMINI_MODEL=gemini-3.5-flash
 RAZORPAY_KEY_ID=your_razorpay_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 DOWNLOAD_TOKEN_SECRET=use_a_long_random_secret
