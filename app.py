@@ -595,7 +595,26 @@ def experience_line_is_metadata(line: str, profile: dict) -> bool:
 def structure_experience_items(items, profile: dict) -> list:
     entries = as_items(items)
     if any(isinstance(item, dict) and (item.get("company") or item.get("dates") or item.get("role")) for item in entries):
-        return entries
+        structured = []
+        for item in entries:
+            if not isinstance(item, dict):
+                continue
+            entry = dict(item)
+            entry["role"] = entry.get("role") or entry.get("title") or profile.get("role", "")
+            entry["company"] = entry.get("company") or entry.get("organization") or profile.get("company", "")
+            entry["location"] = entry.get("location") or profile.get("location", "")
+            entry["dates"] = entry.get("dates") or entry.get("duration") or profile.get("dates", "")
+            bullets = as_list(entry.get("bullets") or entry.get("responsibilities") or entry.get("achievements"))
+            description = entry.get("description") or entry.get("summary") or ""
+            if description and not experience_line_is_metadata(description, profile):
+                bullets.insert(0, description)
+            entry["bullets"] = [
+                bullet
+                for bullet in bullets
+                if str(bullet).strip() and not experience_line_is_metadata(str(bullet), profile)
+            ]
+            structured.append(entry)
+        return structured
 
     bullets = [
         str(item).strip().lstrip("-•* ").strip()
@@ -1665,6 +1684,10 @@ def latex_url_escape(value) -> str:
     return str(value or "").replace("\\", "/").replace("{", "%7B").replace("}", "%7D").replace("%", "%25")
 
 
+def latex_date_range(value: str) -> str:
+    return re.sub(r"\s+[-–—]\s+", " -- ", str(value or "").strip())
+
+
 def visible_url(value: str) -> str:
     return str(value or "").replace("https://", "").replace("http://", "").rstrip("/")
 
@@ -1797,7 +1820,7 @@ def latex_entry_block(item, project: bool = False) -> list[str]:
         second_left = title if company else ""
         if top_left:
             if dates:
-                lines.append(rf"\textbf{{{latex_escape(top_left)}}} \hfill {latex_escape(dates)} \\")
+                lines.append(rf"\textbf{{{latex_escape(top_left)}}} \hfill {latex_escape(latex_date_range(dates))} \\")
             else:
                 lines.append(rf"\textbf{{{latex_escape(top_left)}}}")
             if second_left or location:
@@ -1902,6 +1925,9 @@ def generate_latex_from_resume(rendered_html: str, analysis: dict, tex_path: str
         rf"  {{\Huge\bfseries\color{{accentColor}} {latex_escape(name)}}} \\",
     ]
 
+    if headline:
+        lines.append(r"  \vspace{0.01cm}")
+        lines.append(rf"  {{\small\bfseries {latex_escape(headline)}}} \\")
     if primary_contact_parts:
         lines.append(r"  \vspace{0.02cm}")
         lines.append(r"  {\color{subtextColor}\small\bfseries " + r" \ \textbullet \ ".join(primary_contact_parts) + r"} \\")
