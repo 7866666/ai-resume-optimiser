@@ -905,13 +905,34 @@ def skill_allowed(item: str) -> bool:
         "certifications", "top performer", "sla leadership", "process efficiency",
         "powershell automation suite", "azure hybrid infrastructure support",
         "provide l2", "resolved", "administered", "developed", "assisted", "maintained",
-        "awarded", "reduced", "standardized", "deployed", "managed vm",
+        "awarded", "reduced", "standardized", "deployed", "managed vm", "infrastructure engineer",
+        "windows system administrator", "system administrator", "support microsoft entra",
+        "provisioning", "standard.", "guarantee", "global hybrid architectures",
     ]
     if any(term in lowered for term in blocked):
         return False
     if re.search(r"\b(20\d{2}|present|sep|jan|feb|mar|apr|may|jun|jul|aug|oct|nov|dec)\b", lowered):
         return False
+    if re.search(r"\b(nagpur|india|remote|onsite)\b", lowered) and re.search(r"\b(engineer|administrator|analyst|developer|consultant)\b", lowered):
+        return False
+    if re.match(
+        r"^(administer|monitor|support|assist|provision|resolve|diagnose|document|work(ed)?|manage|configure|implement|troubleshoot|deliver)\b",
+        lowered,
+    ):
+        return False
+    if lowered in {"framework", "other", "miscellaneous", "responsibilities"}:
+        return False
+    if ":" not in text and text.endswith("."):
+        return False
+    if ":" not in text and re.match(r"^[a-z]", text):
+        return False
+    if ":" not in text and len(text.split()) > 12:
+        return False
     return bool(text)
+
+
+def clean_skill_list(items) -> list[str]:
+    return unique_items(item for item in as_list(items) if skill_allowed(item))
 
 
 def clean_optimized_resume(analysis: dict, jd: str, resume: str) -> dict:
@@ -927,7 +948,7 @@ def clean_optimized_resume(analysis: dict, jd: str, resume: str) -> dict:
         "Support: L2/L3 troubleshooting, service desk operations, RCA, SOP documentation",
     ]
 
-    cleaned_skills = [item for item in as_list(optimized.get("skills")) if skill_allowed(item)]
+    cleaned_skills = clean_skill_list(optimized.get("skills"))
     optimized["skills"] = unique_items(cleaned_skills + base_skills)[:14]
 
     if not optimized.get("experience"):
@@ -1663,7 +1684,8 @@ def generate_latex_from_resume(rendered_html: str, analysis: dict, tex_path: str
     lines.extend([r"\end{center}", r"\vspace{-0.4em}"])
 
     lines.extend(latex_section("Summary", [latex_escape(optimized.get("summary") or strip_html(section_html(rendered_html, "Summary")))]))
-    lines.extend(latex_section("Skills", latex_itemize(optimized.get("skills") or li_texts(section_html(rendered_html, "Skills")))))
+    clean_skills = clean_skill_list(optimized.get("skills") or li_texts(section_html(rendered_html, "Skills")))
+    lines.extend(latex_section("Skills", latex_itemize(clean_skills)))
     lines.extend(latex_section("Experience", latex_entries(optimized.get("experience") or li_texts(section_html(rendered_html, "Experience")))))
     lines.extend(latex_section("Projects", latex_entries(optimized.get("projects") or li_texts(section_html(rendered_html, "Projects")))))
     if education:
