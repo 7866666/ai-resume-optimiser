@@ -1008,7 +1008,7 @@ def skill_allowed(item: str) -> bool:
         return False
     if re.search(r"\b(nagpur|india|remote|onsite)\b", lowered) and re.search(r"\b(engineer|administrator|analyst|developer|consultant)\b", lowered):
         return False
-    if re.match(
+    if ":" not in text and re.match(
         r"^(administer|monitor|support|assist|provision|resolve|diagnose|document|work(ed)?|manage|configure|implement|troubleshoot|deliver)\b",
         lowered,
     ):
@@ -1747,14 +1747,14 @@ def latex_entries(items) -> list[str]:
 
 
 def latex_section_rule(title: str) -> list[str]:
-    return ["", rf"\resumeSection{{{latex_escape(title).upper()}}}"]
+    return ["", rf"\resumesection{{{latex_escape(title).upper()}}}"]
 
 
 def latex_compact_bullets(items) -> list[str]:
     bullets = [str(item).strip() for item in as_list(items) if str(item).strip()]
     if not bullets:
         return []
-    return [r"\begin{itemize}[leftmargin=1.15em]", *[rf"\item {latex_escape(item)}" for item in bullets], r"\end{itemize}"]
+    return [r"\begin{itemize}", *[rf"\item {latex_escape(item)}" for item in bullets], r"\end{itemize}"]
 
 
 def latex_skill_rows(items) -> list[str]:
@@ -1762,7 +1762,7 @@ def latex_skill_rows(items) -> list[str]:
     if not skills:
         return []
 
-    rows = [r"\begin{itemize}[leftmargin=1.15em]"]
+    rows = [r"\begin{itemize}[label=\small\textbullet]"]
     for item in skills:
         if ":" in item:
             label, value = item.split(":", 1)
@@ -1796,9 +1796,12 @@ def latex_entry_block(item, project: bool = False) -> list[str]:
         top_left = company or title
         second_left = title if company else ""
         if top_left:
-            lines.append(
-                rf"\resumeEntry{{{latex_escape(top_left)}}}{{{latex_escape(dates)}}}{{{latex_escape(second_left)}}}{{{latex_escape(location)}}}"
-            )
+            if dates:
+                lines.append(rf"\textbf{{{latex_escape(top_left)}}} \hfill {latex_escape(dates)} \\")
+            else:
+                lines.append(rf"\textbf{{{latex_escape(top_left)}}}")
+            if second_left or location:
+                lines.append(rf"\textit{{{latex_escape(second_left)}}} \hfill {latex_escape(location)}")
         elif description:
             lines.append(latex_escape(description))
 
@@ -1815,7 +1818,7 @@ def latex_entry_blocks(items, project: bool = False, fallback_title: str = "") -
     if not project and entries and not any(isinstance(item, dict) for item in entries):
         bullets = [str(item).strip().lstrip("-•* ").strip() for item in entries if str(item).strip()]
         return [
-            rf"\resumeEntry{{{latex_escape(fallback_title or 'Professional Experience')}}}{{}}{{}}{{}}",
+            rf"\textbf{{{latex_escape(fallback_title or 'Professional Experience')}}}",
             *latex_compact_bullets(bullets),
         ]
 
@@ -1863,40 +1866,59 @@ def generate_latex_from_resume(rendered_html: str, analysis: dict, tex_path: str
         primary_contact_parts.append(rf"\href{{{latex_url_escape(contact['portfolio'][1])}}}{{{latex_escape(portfolio_label)}}}")
 
     lines = [
-        r"\documentclass[10pt,a4paper]{article}",
-        r"\usepackage[margin=0.52in]{geometry}",
-        r"\usepackage[hidelinks]{hyperref}",
+        r"\documentclass[10pt, a4paper]{article}",
+        r"\usepackage[a4paper, top=0.75cm, bottom=0.75cm, left=1.2cm, right=1.2cm]{geometry}",
+        r"\usepackage[utf8]{inputenc}",
+        r"\usepackage[T1]{fontenc}",
+        r"\usepackage[english]{babel}",
+        r"\usepackage[scaled=0.92]{helvet}",
+        r"\renewcommand{\familydefault}{\sfdefault}",
         r"\usepackage{enumitem}",
         r"\usepackage{xcolor}",
-        r"\usepackage{tabularx}",
-        r"\definecolor{sectionblue}{HTML}{1F3A5F}",
+        r"\usepackage{multicol}",
+        r"\usepackage{parskip}",
+        r"\raggedbottom",
+        r"\linespread{1.04}",
+        r"\setlist[itemize]{topsep=1pt, partopsep=0pt, parsep=0pt, itemsep=1pt, leftmargin=12pt}",
+        r"\definecolor{primaryColor}{HTML}{000000}",
+        r"\definecolor{accentColor}{HTML}{000000}",
+        r"\definecolor{subtextColor}{HTML}{000000}",
+        r"\definecolor{ruleColor}{HTML}{475569}",
+        r"\color{primaryColor}",
+        r"\newcommand{\resumesection}[1]{%",
+        r"  \vspace{0.10cm}",
+        r"  {\large\bfseries\color{accentColor} #1}",
+        r"  \vspace{0.01cm}",
+        r"  {\color{ruleColor}\hrule height 1.2pt}",
+        r"  \vspace{0.04cm}",
+        r"}",
         r"\pagestyle{empty}",
-        r"\setlength{\parindent}{0pt}",
-        r"\setlength{\parskip}{0.15em}",
-        r"\setlist[itemize]{leftmargin=1.2em, itemsep=0.12em, topsep=0.12em, parsep=0em}",
-        r"\newcommand{\resumeSection}[1]{\vspace{0.45em}\noindent{\large\bfseries\underline{#1}}\par\vspace{-0.25em}{\color{sectionblue}\hrule height 1.2pt}\vspace{0.35em}}",
-        r"\newcommand{\resumeEntry}[4]{\noindent\textbf{#1}\hfill #2\\\textit{#3}\hfill \textit{#4}\vspace{-0.2em}}",
+        r"\usepackage[colorlinks=true, urlcolor=accentColor, linkcolor=accentColor]{hyperref}",
         "",
         r"\begin{document}",
+        "",
+        r"% HEADER",
         r"\begin{center}",
-        rf"{{\Huge \textbf{{{latex_escape(name)}}}}}\\",
+        rf"  {{\Huge\bfseries\color{{accentColor}} {latex_escape(name)}}} \\",
     ]
 
-    if headline:
-        lines.append(rf"{latex_escape(headline)}\\")
     if primary_contact_parts:
-        lines.append(" $\\bullet$ ".join(primary_contact_parts) + r"\\")
+        lines.append(r"  \vspace{0.02cm}")
+        lines.append(r"  {\color{subtextColor}\small\bfseries " + r" \ \textbullet \ ".join(primary_contact_parts) + r"} \\")
     if linkedin_contact:
-        lines.append(linkedin_contact)
-    lines.extend([r"\end{center}", r"\vspace{-0.65em}"])
+        lines.append(r"  \vspace{0.01cm}")
+        lines.append(r"  {\small\bfseries " + linkedin_contact + r"}")
+    lines.extend([r"\end{center}", "", r"\vspace{-0.18cm}"])
 
     summary = optimized.get("summary") or strip_html(section_html(rendered_html, "Summary"))
     if summary:
+        lines.append(r"% SUMMARY")
         lines.extend(latex_section_rule("Professional Summary"))
         lines.append(latex_escape(summary))
 
     skills = latex_skill_rows(optimized.get("skills") or li_texts(section_html(rendered_html, "Skills")))
     if skills:
+        lines.append(r"% TECHNICAL SKILLS")
         lines.extend(latex_section_rule("Technical Skills"))
         lines.extend(skills)
 
@@ -1905,25 +1927,30 @@ def generate_latex_from_resume(rendered_html: str, analysis: dict, tex_path: str
         fallback_title=headline,
     )
     if experience:
+        lines.append(r"% EXPERIENCE")
         lines.extend(latex_section_rule("Professional Experience"))
         lines.extend(experience)
 
     projects = latex_entry_blocks(optimized.get("projects") or li_texts(section_html(rendered_html, "Projects")), project=True)
     if projects:
+        lines.append(r"% PROJECTS")
         lines.extend(latex_section_rule("Technical Projects"))
         lines.extend(projects)
 
     certifications = latex_compact_bullets(optimized.get("certifications") or li_texts(section_html(rendered_html, "Certifications")))
     if certifications:
+        lines.append(r"% CERTIFICATIONS")
         lines.extend(latex_section_rule("Certifications"))
         lines.extend(certifications)
 
     if education:
+        lines.append(r"% EDUCATION")
         lines.extend(latex_section_rule("Education"))
         lines.extend(latex_education_lines(education))
 
     achievements = latex_compact_bullets(optimized.get("achievements") or li_texts(section_html(rendered_html, "Achievements")))
     if achievements:
+        lines.append(r"% ACHIEVEMENTS")
         lines.extend(latex_section_rule("Achievements"))
         lines.extend(achievements)
     lines.extend(["", r"\end{document}", ""])
