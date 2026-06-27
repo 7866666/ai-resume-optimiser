@@ -1571,6 +1571,13 @@ def visible_email(label: str, href: str) -> str:
     return str(href or "").replace("mailto:", "")
 
 
+def clean_latex_location(location: str, name: str) -> str:
+    cleaned = " ".join(str(location or "").split())
+    if name:
+        cleaned = re.sub(rf"\s*{re.escape(name)}\s*$", "", cleaned, flags=re.IGNORECASE)
+    return cleaned.strip(" |,-")
+
+
 def latex_itemize(items: list[str]) -> list[str]:
     lines = [r"\begin{itemize}"]
     for item in items:
@@ -1635,6 +1642,90 @@ def latex_entries(items) -> list[str]:
     return [r"\begin{itemize}", *entries, r"\end{itemize}"]
 
 
+def latex_section_rule(title: str) -> list[str]:
+    return ["", rf"\resumeSection{{{latex_escape(title).upper()}}}"]
+
+
+def latex_compact_bullets(items) -> list[str]:
+    bullets = [str(item).strip() for item in as_list(items) if str(item).strip()]
+    if not bullets:
+        return []
+    return [r"\begin{itemize}[leftmargin=1.15em]", *[rf"\item {latex_escape(item)}" for item in bullets], r"\end{itemize}"]
+
+
+def latex_skill_rows(items) -> list[str]:
+    skills = clean_skill_list(items)
+    if not skills:
+        return []
+
+    rows = [r"\begin{itemize}[leftmargin=1.15em]"]
+    for item in skills:
+        if ":" in item:
+            label, value = item.split(":", 1)
+            rows.append(rf"\item \textbf{{{latex_escape(label.strip())}:}} {latex_escape(value.strip())}")
+        else:
+            rows.append(rf"\item {latex_escape(item)}")
+    rows.append(r"\end{itemize}")
+    return rows
+
+
+def latex_entry_block(item, project: bool = False) -> list[str]:
+    if not isinstance(item, dict):
+        text = str(item).strip()
+        return latex_compact_bullets([text]) if text else []
+
+    title = item.get("role") or item.get("title") or item.get("project") or item.get("name") or ""
+    company = item.get("company") or item.get("organization") or ""
+    location = item.get("location") or ""
+    dates = item.get("dates") or item.get("duration") or ""
+    description = item.get("description") or item.get("summary") or ""
+    bullets = as_list(item.get("bullets") or item.get("responsibilities") or item.get("achievements"))
+
+    lines = []
+    if project:
+        project_name = title or company
+        if project_name:
+            lines.append(rf"\textbf{{{latex_escape(project_name)}}}")
+            if description:
+                lines.append(rf"\\ {latex_escape(description)}")
+    else:
+        top_left = company or title
+        second_left = title if company else ""
+        if top_left:
+            lines.append(
+                rf"\resumeEntry{{{latex_escape(top_left)}}}{{{latex_escape(dates)}}}{{{latex_escape(second_left)}}}{{{latex_escape(location)}}}"
+            )
+        elif description:
+            lines.append(latex_escape(description))
+
+    if bullets:
+        lines.extend(latex_compact_bullets(bullets))
+    elif description and not project:
+        lines.extend(latex_compact_bullets([description]))
+
+    return lines
+
+
+def latex_entry_blocks(items, project: bool = False) -> list[str]:
+    blocks = []
+    for item in as_items(items):
+        block = latex_entry_block(item, project=project)
+        if block:
+            if blocks:
+                blocks.append(r"\vspace{0.25em}")
+            blocks.extend(block)
+    return blocks
+
+
+def latex_education_lines(value: str) -> list[str]:
+    lines = [line.strip() for line in str(value or "").splitlines() if line.strip()]
+    if not lines:
+        return []
+    if len(lines) == 1:
+        return [latex_escape(lines[0])]
+    return [rf"\textbf{{{latex_escape(lines[0])}}}"] + [latex_escape(line) for line in lines[1:]]
+
+
 def generate_latex_from_resume(rendered_html: str, analysis: dict, tex_path: str):
     optimized = analysis.get("optimized_resume", {})
     name = class_text(rendered_html, "header-name") or "Your Name"
@@ -1644,8 +1735,9 @@ def generate_latex_from_resume(rendered_html: str, analysis: dict, tex_path: str
 
     primary_contact_parts = []
     linkedin_contact = ""
-    if contact["location"]:
-        primary_contact_parts.append(latex_escape(contact["location"]))
+    location = clean_latex_location(contact["location"], name)
+    if location:
+        primary_contact_parts.append(latex_escape(location))
     if contact["phone"][0]:
         primary_contact_parts.append(latex_escape(contact["phone"][0]))
     if contact["email"][1]:
@@ -1660,19 +1752,22 @@ def generate_latex_from_resume(rendered_html: str, analysis: dict, tex_path: str
 
     lines = [
         r"\documentclass[10pt,a4paper]{article}",
-        r"\usepackage[margin=0.55in]{geometry}",
+        r"\usepackage[margin=0.52in]{geometry}",
         r"\usepackage[hidelinks]{hyperref}",
         r"\usepackage{enumitem}",
         r"\usepackage{xcolor}",
-        r"\usepackage{titlesec}",
+        r"\usepackage{tabularx}",
+        r"\definecolor{sectionblue}{HTML}{1F3A5F}",
         r"\pagestyle{empty}",
         r"\setlength{\parindent}{0pt}",
-        r"\setlist[itemize]{leftmargin=1.15em, itemsep=0.25em, topsep=0.25em}",
-        r"\titleformat{\section}{\large\bfseries\uppercase}{}{0em}{}",
+        r"\setlength{\parskip}{0.15em}",
+        r"\setlist[itemize]{leftmargin=1.2em, itemsep=0.12em, topsep=0.12em, parsep=0em}",
+        r"\newcommand{\resumeSection}[1]{\vspace{0.45em}\noindent{\large\bfseries\underline{#1}}\par\vspace{-0.25em}{\color{sectionblue}\hrule height 1.2pt}\vspace{0.35em}}",
+        r"\newcommand{\resumeEntry}[4]{\noindent\textbf{#1}\hfill #2\\\textit{#3}\hfill \textit{#4}\vspace{-0.2em}}",
         "",
         r"\begin{document}",
         r"\begin{center}",
-        rf"{{\LARGE \textbf{{{latex_escape(name)}}}}}\\",
+        rf"{{\Huge \textbf{{{latex_escape(name)}}}}}\\",
     ]
 
     if headline:
@@ -1681,17 +1776,41 @@ def generate_latex_from_resume(rendered_html: str, analysis: dict, tex_path: str
         lines.append(" $\\bullet$ ".join(primary_contact_parts) + r"\\")
     if linkedin_contact:
         lines.append(linkedin_contact)
-    lines.extend([r"\end{center}", r"\vspace{-0.4em}"])
+    lines.extend([r"\end{center}", r"\vspace{-0.65em}"])
 
-    lines.extend(latex_section("Summary", [latex_escape(optimized.get("summary") or strip_html(section_html(rendered_html, "Summary")))]))
-    clean_skills = clean_skill_list(optimized.get("skills") or li_texts(section_html(rendered_html, "Skills")))
-    lines.extend(latex_section("Skills", latex_itemize(clean_skills)))
-    lines.extend(latex_section("Experience", latex_entries(optimized.get("experience") or li_texts(section_html(rendered_html, "Experience")))))
-    lines.extend(latex_section("Projects", latex_entries(optimized.get("projects") or li_texts(section_html(rendered_html, "Projects")))))
+    summary = optimized.get("summary") or strip_html(section_html(rendered_html, "Summary"))
+    if summary:
+        lines.extend(latex_section_rule("Professional Summary"))
+        lines.append(latex_escape(summary))
+
+    skills = latex_skill_rows(optimized.get("skills") or li_texts(section_html(rendered_html, "Skills")))
+    if skills:
+        lines.extend(latex_section_rule("Technical Skills"))
+        lines.extend(skills)
+
+    experience = latex_entry_blocks(optimized.get("experience") or li_texts(section_html(rendered_html, "Experience")))
+    if experience:
+        lines.extend(latex_section_rule("Professional Experience"))
+        lines.extend(experience)
+
+    projects = latex_entry_blocks(optimized.get("projects") or li_texts(section_html(rendered_html, "Projects")), project=True)
+    if projects:
+        lines.extend(latex_section_rule("Technical Projects"))
+        lines.extend(projects)
+
+    certifications = latex_compact_bullets(optimized.get("certifications") or li_texts(section_html(rendered_html, "Certifications")))
+    if certifications:
+        lines.extend(latex_section_rule("Certifications"))
+        lines.extend(certifications)
+
     if education:
-        lines.extend(latex_section("Education", [latex_escape(education).replace("\n", r"\\")]))
-    lines.extend(latex_section("Certifications", latex_itemize(optimized.get("certifications") or li_texts(section_html(rendered_html, "Certifications")))))
-    lines.extend(latex_section("Achievements", latex_itemize(optimized.get("achievements") or li_texts(section_html(rendered_html, "Achievements")))))
+        lines.extend(latex_section_rule("Education"))
+        lines.extend(latex_education_lines(education))
+
+    achievements = latex_compact_bullets(optimized.get("achievements") or li_texts(section_html(rendered_html, "Achievements")))
+    if achievements:
+        lines.extend(latex_section_rule("Achievements"))
+        lines.extend(achievements)
     lines.extend(["", r"\end{document}", ""])
 
     with open(tex_path, "w", encoding="utf-8") as tex_file:
