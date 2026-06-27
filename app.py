@@ -405,6 +405,9 @@ def clean_contact_text(value: str) -> str:
     value = " ".join(value.split())
     value = value.replace("LinkedIn –", "LinkedIn -").replace("LinkedIn —", "LinkedIn -")
     value = value.replace("linkedin.com/i n/", "linkedin.com/in/")
+    value = re.sub(r"(linkedin\.com)\s*/\s*in\s*/", r"\1/in/", value, flags=re.IGNORECASE)
+    value = re.sub(r"(https?://)\s+", r"\1", value, flags=re.IGNORECASE)
+    value = re.sub(r"(www\.)\s+", r"\1", value, flags=re.IGNORECASE)
     return value
 
 
@@ -412,7 +415,8 @@ def build_contact_block(lines: list[str]) -> str:
     raw = clean_contact_text(" ".join(lines))
     email_match = re.search(r"[\w.+-]+@[\w-]+\.[\w.-]+", raw)
     phone_match = re.search(r"(?:\+?\d[\d\s-]{8,}\d)", raw)
-    urls = re.findall(r"https?://[^\s|]+", raw)
+    urls = re.findall(r"(?:https?://|www\.)[^\s|,;]+|(?:linkedin\.com|github\.com)/[^\s|,;]+", raw, flags=re.IGNORECASE)
+    urls = [url if url.startswith(("http://", "https://")) else f"https://{url}" for url in urls]
 
     email = email_match.group(0) if email_match else ""
     phone = phone_match.group(0).strip() if phone_match else ""
@@ -433,20 +437,47 @@ def build_contact_block(lines: list[str]) -> str:
     rows = []
     if phone:
         tel = re.sub(r"[^\d+]", "", phone)
-        rows.append(f'<div class="contact-line">☎ <a href="tel:{html.escape(tel)}">{html.escape(phone)}</a></div>')
+        rows.append(f'<div class="contact-line">Phone: <a href="tel:{html.escape(tel)}">{html.escape(phone)}</a></div>')
     if email:
-        rows.append(f'<div class="contact-line">✉ <a href="mailto:{html.escape(email)}">{html.escape(email)}</a></div>')
+        rows.append(f'<div class="contact-line">Email: <a href="mailto:{html.escape(email)}">{html.escape(email)}</a></div>')
     if location:
-        rows.append(f'<div class="contact-line">📍 {html.escape(location)}</div>')
+        rows.append(f'<div class="contact-line">Location: {html.escape(location)}</div>')
     if portfolio_url:
-        rows.append(f'<div class="contact-line">🔗 <a href="{html.escape(portfolio_url)}">Portfolio</a></div>')
+        portfolio_label = portfolio_url.replace("https://", "").replace("http://", "").rstrip("/")
+        rows.append(f'<div class="contact-line">Portfolio: <a href="{html.escape(portfolio_url)}">{html.escape(portfolio_label)}</a></div>')
     if linkedin_url:
-        rows.append(f'<div class="contact-line">💼 <a href="{html.escape(linkedin_url)}">LinkedIn</a></div>')
+        linkedin_label = linkedin_url.replace("https://", "").replace("http://", "").rstrip("/")
+        rows.append(f'<div class="contact-line">LinkedIn: <a href="{html.escape(linkedin_url)}">{html.escape(linkedin_label)}</a></div>')
 
     if rows:
         return '<div class="contact">' + "".join(rows) + "</div>"
 
     return f'<div class="contact">{html.escape(raw)}</div>'
+
+
+def extract_contact_lines(lines: list[str]) -> list[str]:
+    section_names = {
+        "summary",
+        "skills",
+        "experience",
+        "professional experience",
+        "projects",
+        "education",
+        "certifications",
+        "certification",
+        "achievements",
+    }
+    contact_lines = []
+    for line in lines[1:35]:
+        lowered = line.strip().lower().rstrip(":")
+        if lowered in section_names:
+            break
+        if re.search(r"@|(?:\+?\d[\d\s-]{8,}\d)|linkedin|https?://|www\.|location|address", line, re.IGNORECASE):
+            contact_lines.append(line)
+            continue
+        if re.search(r"\b[A-Za-z][A-Za-z ]{1,40},\s*[A-Za-z]{2,40}\b", line):
+            contact_lines.append(line)
+    return contact_lines
 
 
 def extract_header(text: str, optimized_headline: str | None = None) -> str:
@@ -455,12 +486,7 @@ def extract_header(text: str, optimized_headline: str | None = None) -> str:
     name = html.escape(lines[0]) if len(lines) > 0 else ""
     role_text = optimized_headline or (lines[1] if len(lines) > 1 else "")
     role = html.escape(role_text)
-    contact_lines = []
-    for line in lines[2:9]:
-        if line.strip().lower() in {"summary", "skills", "experience", "projects", "education", "certifications"}:
-            break
-        contact_lines.append(line)
-    contact = build_contact_block(contact_lines)
+    contact = build_contact_block(extract_contact_lines(lines))
 
     return f"""
     <div class="header-name">{name}</div>
