@@ -430,7 +430,10 @@ def build_contact_block(lines: list[str]) -> str:
     location_source = re.sub(r"\b(Portfolio|LinkedIn)\b\s*[-–—]?", " ", location_source, flags=re.IGNORECASE)
 
     location = ""
-    location_match = re.search(r"\b([A-Za-z][A-Za-z ]{1,40},\s*[A-Za-z][A-Za-z ]{1,40})\b", location_source)
+    location_match = re.search(
+        r"\b([A-Za-z][A-Za-z ]{1,40},\s*[A-Za-z][A-Za-z ]{1,40}(?:,\s*[A-Za-z][A-Za-z ]{1,40})?)\b",
+        location_source,
+    )
     if location_match:
         location = location_match.group(1).strip()
 
@@ -475,7 +478,7 @@ def extract_contact_lines(lines: list[str]) -> list[str]:
         if re.search(r"@|(?:\+?\d[\d\s-]{8,}\d)|linkedin|https?://|www\.|location|address", line, re.IGNORECASE):
             contact_lines.append(line)
             continue
-        if re.search(r"\b[A-Za-z][A-Za-z ]{1,40},\s*[A-Za-z]{2,40}\b", line):
+        if re.search(r"\b[A-Za-z][A-Za-z ]{1,40},\s*[A-Za-z]{2,40}(?:,\s*[A-Za-z]{2,40})?\b", line):
             contact_lines.append(line)
     return contact_lines
 
@@ -1427,7 +1430,7 @@ def contact_links(rendered_html: str) -> dict:
     source = contact_match.group(1) if contact_match else rendered_html
     links = dict(re.findall(r'<a href="([^"]+)">([^<]+)</a>', source, flags=re.IGNORECASE))
     text = contact_text(rendered_html)
-    location_match = re.search(r"Location:\s*([^\\n]+?)(?:Portfolio:|LinkedIn:|$)", text)
+    location_match = re.search(r"Location:\s*([^\n]+)", text)
     return {
         "phone": next(((label, href) for href, label in links.items() if href.startswith("tel:")), ("", "")),
         "email": next(((label, href) for href, label in links.items() if href.startswith("mailto:")), ("Email", "")),
@@ -1537,6 +1540,16 @@ def latex_url_escape(value) -> str:
     return str(value or "").replace("\\", "/").replace("{", "%7B").replace("}", "%7D").replace("%", "%25")
 
 
+def visible_url(value: str) -> str:
+    return str(value or "").replace("https://", "").replace("http://", "").rstrip("/")
+
+
+def visible_email(label: str, href: str) -> str:
+    if label and label.lower() != "email":
+        return label
+    return str(href or "").replace("mailto:", "")
+
+
 def latex_itemize(items: list[str]) -> list[str]:
     lines = [r"\begin{itemize}"]
     for item in items:
@@ -1608,17 +1621,21 @@ def generate_latex_from_resume(rendered_html: str, analysis: dict, tex_path: str
     contact = contact_links(rendered_html)
     education = strip_html(section_html(rendered_html, "Education"))
 
-    contact_parts = []
+    primary_contact_parts = []
+    linkedin_contact = ""
     if contact["location"]:
-        contact_parts.append(latex_escape(contact["location"]))
+        primary_contact_parts.append(latex_escape(contact["location"]))
     if contact["phone"][0]:
-        contact_parts.append(latex_escape(contact["phone"][0]))
+        primary_contact_parts.append(latex_escape(contact["phone"][0]))
     if contact["email"][1]:
-        contact_parts.append(rf"\href{{{latex_url_escape(contact['email'][1])}}}{{Email}}")
+        email_label = visible_email(contact["email"][0], contact["email"][1])
+        primary_contact_parts.append(rf"\href{{{latex_url_escape(contact['email'][1])}}}{{{latex_escape(email_label)}}}")
     if contact["linkedin"][1]:
-        contact_parts.append(rf"\href{{{latex_url_escape(contact['linkedin'][1])}}}{{LinkedIn}}")
+        linkedin_label = visible_url(contact["linkedin"][1])
+        linkedin_contact = rf"\href{{{latex_url_escape(contact['linkedin'][1])}}}{{{latex_escape(linkedin_label)}}}"
     if contact["portfolio"][1]:
-        contact_parts.append(rf"\href{{{latex_url_escape(contact['portfolio'][1])}}}{{Portfolio}}")
+        portfolio_label = visible_url(contact["portfolio"][1])
+        primary_contact_parts.append(rf"\href{{{latex_url_escape(contact['portfolio'][1])}}}{{{latex_escape(portfolio_label)}}}")
 
     lines = [
         r"\documentclass[10pt,a4paper]{article}",
@@ -1639,8 +1656,10 @@ def generate_latex_from_resume(rendered_html: str, analysis: dict, tex_path: str
 
     if headline:
         lines.append(rf"{latex_escape(headline)}\\")
-    if contact_parts:
-        lines.append(" $\\mid$ ".join(contact_parts))
+    if primary_contact_parts:
+        lines.append(" $\\bullet$ ".join(primary_contact_parts) + r"\\")
+    if linkedin_contact:
+        lines.append(linkedin_contact)
     lines.extend([r"\end{center}", r"\vspace{-0.4em}"])
 
     lines.extend(latex_section("Summary", [latex_escape(optimized.get("summary") or strip_html(section_html(rendered_html, "Summary")))]))
