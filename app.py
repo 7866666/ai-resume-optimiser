@@ -524,6 +524,99 @@ def extract_education(text: str) -> str:
     return "<br>".join(education) if education else "Not Found"
 
 
+def extract_experience_profile(text: str, headline: str | None = None) -> dict:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    start = 0
+    for index, line in enumerate(lines):
+        if line.strip().lower().rstrip(":") in {"experience", "professional experience", "work experience"}:
+            start = index + 1
+            break
+
+    section_lines = []
+    for line in lines[start : start + 18]:
+        lowered = line.strip().lower().rstrip(":")
+        if lowered in {"projects", "education", "skills", "certifications", "achievements", "summary"}:
+            break
+        section_lines.append(line)
+
+    date_pattern = r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{4}\s*(?:-|–|—|to)\s*(?:present|current|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{4}|\d{4})|\d{4}\s*(?:-|–|—|to)\s*(?:present|current|\d{4})"
+    role = ""
+    company = ""
+    dates = ""
+    location = ""
+
+    for line in section_lines:
+        if not dates and re.search(date_pattern, line, re.IGNORECASE):
+            date_match = re.search(date_pattern, line, re.IGNORECASE)
+            dates = date_match.group(0).replace("–", "-").replace("—", "-").strip()
+            before_date = line[: date_match.start()].strip(" |,-")
+            if "|" in before_date:
+                parts = [part.strip() for part in before_date.split("|") if part.strip()]
+                if parts:
+                    company = parts[0]
+                if len(parts) > 1 and not role:
+                    role = parts[1]
+            elif before_date and not company:
+                company = before_date
+            continue
+
+        if not location and re.search(r"\b[A-Za-z][A-Za-z ]{1,40},\s*[A-Za-z]{2,40}(?:,\s*[A-Za-z]{2,40})?\b", line):
+            location = re.search(r"\b[A-Za-z][A-Za-z ]{1,40},\s*[A-Za-z]{2,40}(?:,\s*[A-Za-z]{2,40})?\b", line).group(0)
+            continue
+
+        lowered = line.lower()
+        if not role and re.search(r"\b(engineer|administrator|analyst|developer|consultant|specialist|manager)\b", lowered):
+            role = line
+            continue
+
+        if not company and not re.match(r"^[-•*]|\d+[.)]", line) and len(line.split()) <= 6:
+            company = line
+
+    return {
+        "role": role or headline or "",
+        "company": company,
+        "location": location,
+        "dates": dates,
+    }
+
+
+def experience_line_is_metadata(line: str, profile: dict) -> bool:
+    text = " ".join(str(line or "").split()).lower()
+    if not text:
+        return True
+    for value in [profile.get("role"), profile.get("company"), profile.get("location"), profile.get("dates")]:
+        if value and " ".join(str(value).split()).lower() in text:
+            return True
+    if re.search(r"\b(20\d{2}|present|current|sep|sept|jan|feb|mar|apr|may|jun|jul|aug|oct|nov|dec)\b", text):
+        return True
+    return False
+
+
+def structure_experience_items(items, profile: dict) -> list:
+    entries = as_items(items)
+    if any(isinstance(item, dict) and (item.get("company") or item.get("dates") or item.get("role")) for item in entries):
+        return entries
+
+    bullets = [
+        str(item).strip().lstrip("-•* ").strip()
+        for item in entries
+        if str(item).strip() and not experience_line_is_metadata(str(item), profile)
+    ]
+
+    if not bullets:
+        return entries
+
+    return [
+        {
+            "role": profile.get("role", ""),
+            "company": profile.get("company", ""),
+            "location": profile.get("location", ""),
+            "dates": profile.get("dates", ""),
+            "bullets": bullets,
+        }
+    ]
+
+
 # ================= AI / ATS =================
 
 def important_terms(text: str) -> list[str]:
@@ -932,11 +1025,21 @@ def skill_allowed(item: str) -> bool:
 
 
 def clean_skill_list(items) -> list[str]:
-    return unique_items(item for item in as_list(items) if skill_allowed(item))
+    cleaned = []
+    for item in as_list(items):
+        text = str(item).strip()
+        if not skill_allowed(text):
+            continue
+        if cleaned and ":" in cleaned[-1] and ":" not in text and len(text.split()) <= 2:
+            cleaned[-1] = f"{cleaned[-1].rstrip(',')} {text}"
+            continue
+        cleaned.append(text)
+    return unique_items(cleaned)
 
 
 def clean_optimized_resume(analysis: dict, jd: str, resume: str) -> dict:
     optimized = analysis["optimized_resume"]
+    experience_profile = extract_experience_profile(resume, optimized.get("headline"))
     base_skills = [
         "Operating Systems: Windows 10/11, Windows Server, macOS, iOS",
         "Cloud & Identity: Azure, Microsoft 365 Admin Center, Active Directory, Azure Hybrid Identity",
@@ -953,6 +1056,7 @@ def clean_optimized_resume(analysis: dict, jd: str, resume: str) -> dict:
 
     if not optimized.get("experience"):
         optimized["experience"] = fallback_analysis(jd, resume)["optimized_resume"]["experience"]
+    optimized["experience"] = structure_experience_items(optimized.get("experience"), experience_profile)
     if not optimized.get("projects"):
         optimized["projects"] = fallback_analysis(jd, resume)["optimized_resume"]["projects"]
     if not optimized.get("achievements"):
@@ -1706,9 +1810,17 @@ def latex_entry_block(item, project: bool = False) -> list[str]:
     return lines
 
 
-def latex_entry_blocks(items, project: bool = False) -> list[str]:
+def latex_entry_blocks(items, project: bool = False, fallback_title: str = "") -> list[str]:
+    entries = as_items(items)
+    if not project and entries and not any(isinstance(item, dict) for item in entries):
+        bullets = [str(item).strip().lstrip("-•* ").strip() for item in entries if str(item).strip()]
+        return [
+            rf"\resumeEntry{{{latex_escape(fallback_title or 'Professional Experience')}}}{{}}{{}}{{}}",
+            *latex_compact_bullets(bullets),
+        ]
+
     blocks = []
-    for item in as_items(items):
+    for item in entries:
         block = latex_entry_block(item, project=project)
         if block:
             if blocks:
@@ -1788,7 +1900,10 @@ def generate_latex_from_resume(rendered_html: str, analysis: dict, tex_path: str
         lines.extend(latex_section_rule("Technical Skills"))
         lines.extend(skills)
 
-    experience = latex_entry_blocks(optimized.get("experience") or li_texts(section_html(rendered_html, "Experience")))
+    experience = latex_entry_blocks(
+        optimized.get("experience") or li_texts(section_html(rendered_html, "Experience")),
+        fallback_title=headline,
+    )
     if experience:
         lines.extend(latex_section_rule("Professional Experience"))
         lines.extend(experience)
