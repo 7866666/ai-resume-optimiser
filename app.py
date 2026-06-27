@@ -141,7 +141,7 @@ a { color: #0c6576; }
 <h2>Data Processed</h2>
 <p>The application processes uploaded resume content, job descriptions, generated analysis, optimized resume text, and downloaded document output.</p>
 <h2>Purpose</h2>
-<p>Data is used only to provide ATS analysis, resume recommendations, preview, and Word/PDF document generation.</p>
+<p>Data is used only to provide ATS analysis, resume recommendations, preview, and Word/PDF/LaTeX document generation.</p>
 <h2>Third-Party AI Processing</h2>
 <p>Resume and job description content may be sent to the configured Gemini API provider to generate optimization results.</p>
 <h2>Storage</h2>
@@ -1491,6 +1491,146 @@ def generate_docx_from_resume(rendered_html: str, analysis: dict, docx_path: str
     doc.save(docx_path)
 
 
+def latex_escape(value) -> str:
+    replacements = {
+        "\\": r"\textbackslash{}",
+        "&": r"\&",
+        "%": r"\%",
+        "$": r"\$",
+        "#": r"\#",
+        "_": r"\_",
+        "{": r"\{",
+        "}": r"\}",
+        "~": r"\textasciitilde{}",
+        "^": r"\textasciicircum{}",
+    }
+    return "".join(replacements.get(char, char) for char in str(value or ""))
+
+
+def latex_url_escape(value) -> str:
+    return str(value or "").replace("\\", "/").replace("{", "%7B").replace("}", "%7D").replace("%", "%25")
+
+
+def latex_itemize(items: list[str]) -> list[str]:
+    lines = [r"\begin{itemize}"]
+    for item in items:
+        if str(item).strip():
+            lines.append(rf"  \item {latex_escape(item)}")
+    lines.append(r"\end{itemize}")
+    return lines
+
+
+def latex_section(title: str, content: list[str]) -> list[str]:
+    if not content:
+        return []
+    return [
+        "",
+        rf"\section*{{{latex_escape(title).upper()}}}",
+        r"\vspace{-0.8em}\hrule\vspace{0.6em}",
+        *content,
+    ]
+
+
+def latex_entry_lines(item) -> list[str]:
+    if not isinstance(item, dict):
+        text = str(item).strip()
+        return [rf"\item {latex_escape(text)}"] if text else []
+
+    title = item.get("role") or item.get("name") or item.get("title") or item.get("project") or ""
+    meta = " | ".join(
+        str(value)
+        for value in [item.get("company"), item.get("location"), item.get("dates") or item.get("duration")]
+        if value
+    )
+    description = item.get("description") or item.get("summary") or ""
+    bullets = as_list(item.get("bullets") or item.get("responsibilities") or item.get("achievements"))
+
+    lines = []
+    if title:
+        heading = rf"\textbf{{{latex_escape(title)}}}"
+        if meta:
+            heading += rf" \hfill \textit{{{latex_escape(meta)}}}"
+        lines.append(rf"\item {heading}")
+    elif meta:
+        lines.append(rf"\item \textit{{{latex_escape(meta)}}}")
+
+    if description:
+        if lines:
+            lines.append(rf"  {latex_escape(description)}")
+        else:
+            lines.append(rf"\item {latex_escape(description)}")
+
+    for bullet in bullets:
+        lines.append(rf"  \begin{{itemize}}\item {latex_escape(bullet)}\end{{itemize}}")
+
+    return lines
+
+
+def latex_entries(items) -> list[str]:
+    entries = []
+    for item in as_items(items):
+        entries.extend(latex_entry_lines(item))
+    if not entries:
+        return []
+    return [r"\begin{itemize}", *entries, r"\end{itemize}"]
+
+
+def generate_latex_from_resume(rendered_html: str, analysis: dict, tex_path: str):
+    optimized = analysis.get("optimized_resume", {})
+    name = class_text(rendered_html, "header-name") or "Your Name"
+    headline = class_text(rendered_html, "header-role")
+    contact = contact_links(rendered_html)
+    education = strip_html(section_html(rendered_html, "Education"))
+
+    contact_parts = []
+    if contact["location"]:
+        contact_parts.append(latex_escape(contact["location"]))
+    if contact["phone"][0]:
+        contact_parts.append(latex_escape(contact["phone"][0]))
+    if contact["email"][1]:
+        contact_parts.append(rf"\href{{{latex_url_escape(contact['email'][1])}}}{{Email}}")
+    if contact["linkedin"][1]:
+        contact_parts.append(rf"\href{{{latex_url_escape(contact['linkedin'][1])}}}{{LinkedIn}}")
+    if contact["portfolio"][1]:
+        contact_parts.append(rf"\href{{{latex_url_escape(contact['portfolio'][1])}}}{{Portfolio}}")
+
+    lines = [
+        r"\documentclass[10pt,a4paper]{article}",
+        r"\usepackage[margin=0.55in]{geometry}",
+        r"\usepackage[hidelinks]{hyperref}",
+        r"\usepackage{enumitem}",
+        r"\usepackage{xcolor}",
+        r"\usepackage{titlesec}",
+        r"\pagestyle{empty}",
+        r"\setlength{\parindent}{0pt}",
+        r"\setlist[itemize]{leftmargin=1.15em, itemsep=0.25em, topsep=0.25em}",
+        r"\titleformat{\section}{\large\bfseries\uppercase}{}{0em}{}",
+        "",
+        r"\begin{document}",
+        r"\begin{center}",
+        rf"{{\LARGE \textbf{{{latex_escape(name)}}}}}\\",
+    ]
+
+    if headline:
+        lines.append(rf"{latex_escape(headline)}\\")
+    if contact_parts:
+        lines.append(" $\\mid$ ".join(contact_parts))
+    lines.extend([r"\end{center}", r"\vspace{-0.4em}"])
+
+    lines.extend(latex_section("Summary", [latex_escape(optimized.get("summary") or strip_html(section_html(rendered_html, "Summary")))]))
+    lines.extend(latex_section("Skills", latex_itemize(optimized.get("skills") or li_texts(section_html(rendered_html, "Skills")))))
+    lines.extend(latex_section("Experience", latex_entries(optimized.get("experience") or li_texts(section_html(rendered_html, "Experience")))))
+    lines.extend(latex_section("Projects", latex_entries(optimized.get("projects") or li_texts(section_html(rendered_html, "Projects")))))
+    if education:
+        lines.extend(latex_section("Education", [latex_escape(education).replace("\n", r"\\")]))
+    lines.extend(latex_section("Certifications", latex_itemize(optimized.get("certifications") or li_texts(section_html(rendered_html, "Certifications")))))
+    lines.extend(latex_section("Achievements", latex_itemize(optimized.get("achievements") or li_texts(section_html(rendered_html, "Achievements")))))
+    lines.extend(["", r"\end{document}", ""])
+
+    with open(tex_path, "w", encoding="utf-8") as tex_file:
+        tex_file.write("\n".join(lines))
+
+
 def find_browser_executable() -> str | None:
     browser_paths = [
         r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
@@ -1894,6 +2034,7 @@ li {{
       <a class="button" href="/preview/{safe_fid}">View optimized resume</a>
       <a class="button" href="/docx/{safe_fid}{token_query}">Download Word</a>
       <a class="button" href="/pdf/{safe_fid}{token_query}">Download PDF</a>
+      <a class="button" href="/latex/{safe_fid}{token_query}">Download LaTeX</a>
     </div>
   </div>
 
@@ -2000,6 +2141,9 @@ async def create_payment_order(request: Request):
         return {
             "owner_exempt": True,
             "download_token": make_download_token(fid, email),
+            "download_docx": f"/docx/{fid}",
+            "download_pdf": f"/pdf/{fid}",
+            "download_latex": f"/latex/{fid}",
             "amount_rupees": 0,
             "currency": "INR",
         }
@@ -2011,6 +2155,9 @@ async def create_payment_order(request: Request):
             "owner_exempt": False,
             "free_trial": True,
             "download_token": make_download_token(fid, email),
+            "download_docx": f"/docx/{fid}",
+            "download_pdf": f"/pdf/{fid}",
+            "download_latex": f"/latex/{fid}",
             "free_trials_remaining": status["remaining"],
             "free_trial_limit": FREE_TRIAL_RESUMES,
             "amount_rupees": 0,
@@ -2104,6 +2251,7 @@ async def verify_payment(request: Request):
         "download_token": make_download_token(fid, email),
         "download_docx": f"/docx/{fid}",
         "download_pdf": f"/pdf/{fid}",
+        "download_latex": f"/latex/{fid}",
     }
 
 
@@ -2186,6 +2334,7 @@ async def optimize_resume(
         "share_url": f"/preview/{fid}",
         "download_pdf": f"/pdf/{fid}",
         "download_docx": f"/docx/{fid}",
+        "download_latex": f"/latex/{fid}",
         "payment_required": not owner_exempt,
         "payments_enabled": PAYMENTS_ENABLED,
         "price_rupees": RESUME_PRICE_RUPEES,
@@ -2346,4 +2495,29 @@ def download_docx(fid: str, token: str | None = None):
         docx_path,
         filename="optimized_resume.docx",
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
+@app.get("/latex/{fid}")
+def download_latex(fid: str, token: str | None = None):
+    cursor.execute("SELECT html, analysis_json FROM resumes WHERE id=?", (fid,))
+    row = cursor.fetchone()
+
+    if not row:
+        return JSONResponse(status_code=404, content={"error": "Not found"})
+
+    access_error = require_download_access(fid, token)
+    if access_error:
+        return access_error
+
+    rendered_html = row[0]
+    analysis = json.loads(row[1] or "{}")
+    tex_path = os.path.join(OUTPUT_DIR, f"{fid}.tex")
+
+    generate_latex_from_resume(rendered_html, analysis, tex_path)
+
+    return FileResponse(
+        tex_path,
+        filename="optimized_resume.tex",
+        media_type="text/x-tex",
     )

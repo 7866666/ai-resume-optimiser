@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#102a43">
-<meta name="description" content="AI resume optimizer with ATS scoring, job-description matching, recruiter-ready preview, and Word/PDF document output.">
+<meta name="description" content="AI resume optimizer with ATS scoring, job-description matching, recruiter-ready preview, and Word/PDF/LaTeX document output.">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/app-logo-icon.png" type="image/png">
 <title>ResumeFit Pro</title>
@@ -1596,7 +1596,7 @@ textarea {
       <div class="builder-step active" data-step="1"><strong>Upload</strong><span>Add your DOCX resume</span></div>
       <div class="builder-step active" data-step="2"><strong>Target</strong><span>Paste the job description</span></div>
       <div class="builder-step" data-step="3"><strong>Improve</strong><span>Review ATS guidance</span></div>
-      <div class="builder-step" data-step="4"><strong>Download</strong><span>Unlock DOCX and PDF</span></div>
+      <div class="builder-step" data-step="4"><strong>Download</strong><span>Unlock DOCX, PDF, and LaTeX</span></div>
     </div>
   </section>
 
@@ -1605,7 +1605,7 @@ textarea {
       <div class="hero-content">
         <div class="eyebrow">AI resume tailoring workspace</div>
         <h1>Tailor your resume to every job description.</h1>
-        <p>Upload your resume, paste the target role, and get a rewritten job-specific resume with ATS score, missing keywords, recruiter-safe formatting, live preview, and DOCX/PDF exports.</p>
+        <p>Upload your resume, paste the target role, and get a rewritten job-specific resume with ATS score, missing keywords, recruiter-safe formatting, live preview, and DOCX/PDF/LaTeX exports.</p>
         <div class="hero-stats">
           <div class="hero-stat"><strong>32+</strong><span>resume-ready layouts</span></div>
           <div class="hero-stat"><strong>90%+</strong><span>target ATS alignment</span></div>
@@ -1626,7 +1626,7 @@ textarea {
       </div>
       <div class="guide-step">
         <div class="guide-num">3</div>
-        <div><strong>Review and download</strong><span>Preview the result and export polished Word and PDF files.</span></div>
+        <div><strong>Review and download</strong><span>Preview the result and export polished Word, PDF, and LaTeX files.</span></div>
       </div>
     </aside>
   </section>
@@ -1794,7 +1794,7 @@ textarea {
         <div>
           <div class="section-kicker">Live analysis</div>
           <h2>Optimization Results</h2>
-          <p id="result-subtitle">Run an analysis to view ATS score, changes, preview, and Word/PDF downloads.</p>
+          <p id="result-subtitle">Run an analysis to view ATS score, changes, preview, and Word/PDF/LaTeX downloads.</p>
         </div>
         <div class="live-badge"><span class="live-dot"></span><span id="result-state">Ready</span></div>
       </div>
@@ -2131,6 +2131,7 @@ function renderDownloadLinks(data, token) {
   downloadsBox.innerHTML = `
     <a href="${withToken(data.download_docx, token)}" class="primary-link">Download Word document</a>
     <a href="${withToken(data.download_pdf, token)}">Download PDF</a>
+    <a href="${withToken(data.download_latex, token)}">Download LaTeX source</a>
     <a href="${data.preview_url}">Preview optimized resume</a>
     <a href="${data.share_url || data.preview_url}">Public resume link</a>
     <a href="${withToken(data.analysis_url, token)}">View full analysis</a>
@@ -2238,7 +2239,7 @@ function renderPaymentPrompt(data) {
   const hasFreeTrial = Number(data.free_trials_remaining || 0) > 0;
   downloadsBox.innerHTML = `
     <p class="download-price">${hasFreeTrial ? `${data.free_trials_remaining} free trial${data.free_trials_remaining === 1 ? "" : "s"} left` : `Rs ${data.price_rupees} per resume`}</p>
-    <p class="download-note">${hasFreeTrial ? "Use a free trial to unlock Word and PDF downloads for this optimized resume. Payment starts after your free trials are used." : "Preview and analysis are free. Complete payment once to unlock Word and PDF downloads for this optimized resume."}</p>
+    <p class="download-note">${hasFreeTrial ? "Use a free trial to unlock Word, PDF, and LaTeX downloads for this optimized resume. Payment starts after your free trials are used." : "Preview and analysis are free. Complete payment once to unlock Word, PDF, and LaTeX downloads for this optimized resume."}</p>
     <button type="button" id="pay-download">${hasFreeTrial ? "Use free trial download" : "Pay and unlock download"}</button>
     <a href="${data.preview_url}">Preview optimized resume</a>
     <a href="${data.share_url || data.preview_url}">Public resume link</a>
@@ -2399,7 +2400,7 @@ form.addEventListener("reset", () => {
   targetScore.textContent = "--";
   keywordCount.textContent = "--";
   resultState.textContent = "Ready";
-  resultSubtitle.textContent = "Run an analysis to view ATS score, changes, preview, and Word/PDF downloads.";
+  resultSubtitle.textContent = "Run an analysis to view ATS score, changes, preview, and Word/PDF/LaTeX downloads.";
   changesBox.className = "placeholder";
   changesBox.textContent = "No analysis yet.";
   downloadsBox.className = "placeholder";
@@ -2454,7 +2455,7 @@ form.addEventListener("submit", async (event) => {
   targetScore.textContent = `${data.target_ats_score}%+`;
   keywordCount.textContent = missing.length;
   resultState.textContent = "Complete";
-  resultSubtitle.textContent = "Review recommendations, preview the resume, or download the Word or PDF file.";
+  resultSubtitle.textContent = "Review recommendations, preview the resume, or download the Word, PDF, or LaTeX file.";
   statusBox.textContent = "Optimization complete.";
   renderDashboard(data.score_breakdown || {});
   renderQualityMetrics(data.quality_metrics || {});
